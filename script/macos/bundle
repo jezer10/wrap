@@ -52,7 +52,7 @@ WORKSPACE_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 #
 # This should be kept in sync with the definition of this variable in
 # `.cargo/config.toml`.
-export MACOSX_DEPLOYMENT_TARGET="10.14"
+export MACOSX_DEPLOYMENT_TARGET="11.0"
 
 # Constants used later in the script.
 INTEL_ARCH="x86_64"
@@ -208,9 +208,9 @@ function notarize_artifact() {
 }
 
 # Defaults for command-line flags.
-UNIVERSAL_BINARY=true
+UNIVERSAL_BINARY=false
 BUILD_BINARY=true
-TARGET_ARCH=""
+TARGET_ARCH="$ARM_ARCH"
 DMG_NAME_SUFFIX=""
 # By default we build dev bundles.
 RELEASE_CHANNEL="dev"

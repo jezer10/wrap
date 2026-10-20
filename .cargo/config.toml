@@ -5,8 +5,8 @@
 # of mac os by default.
 #
 # This should be kept in sync with the definition of this variable in
-# `script/bundle`.
-MACOSX_DEPLOYMENT_TARGET = "10.14"
+# `script/macos/bundle`.
+MACOSX_DEPLOYMENT_TARGET = "11.0"
 
 [net]
 git-fetch-with-cli = true

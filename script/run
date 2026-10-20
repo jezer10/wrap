@@ -18,6 +18,19 @@ cd "${REPO_ROOT}"
 
 OS_TYPE="$(uname -s)"
 
+if [[ "$OS_TYPE" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
+  echo "This fork supports macOS on Apple Silicon. Run from a native ARM64 terminal." >&2
+  exit 1
+fi
+if ! command -v rustc >/dev/null 2>&1; then
+  echo "Rust is required. Run ./script/bootstrap --skip-common-skills first." >&2
+  exit 1
+fi
+if [[ "$(rustc -vV)" != *"host: aarch64-apple-darwin"* ]]; then
+  echo "This fork requires a native aarch64-apple-darwin Rust toolchain." >&2
+  exit 1
+fi
+
 FEATURES="gui"
 INSTALL_COMMON_SKILLS=1
 FORCE_COMMON_SKILLS=0

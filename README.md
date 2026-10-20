@@ -1,3 +1,29 @@
+## Personal fork: macOS Apple Silicon
+
+This fork targets macOS 11 or later on ARM64 (Apple Silicon). Windows runtime binaries have
+been removed. Shared platform code remains to make upstream updates easier, but Windows,
+Linux, and Intel Mac builds are not maintained in this fork.
+
+Run from a native ARM64 terminal with an `aarch64-apple-darwin` Rust toolchain. Install full
+Xcode and select it with `xcode-select` before bootstrapping; Command Line Tools alone do not
+provide all the tools needed to bundle the app.
+
+```sh
+./script/bootstrap --skip-common-skills
+WARP_SKIP_COMMON_SKILLS_INSTALL=1 ./script/run
+```
+
+`./script/run --dont-open` builds the local app without launching it. Local builds use the
+native Rust target; `script/macos/bundle` defaults to ARM64 instead of a universal binary,
+and the Dock tile plugin also builds for ARM64 only. Avoid target overrides when building
+this fork. Upstream CI requires Warp infrastructure and is not enabled for this fork.
+
+Removing the Windows binaries saves about 47 MiB in the working tree. Existing Git commits
+still retain those files; this change does not rewrite the fork's history. Rust build output
+under `target/` can grow much larger than the source checkout.
+
+---
+
 <a href="https://www.warp.dev">
     <img width="1024" alt="Warp Agentic Development Environment product preview" src="https://github.com/user-attachments/assets/9976b2da-2edd-4604-a36c-8fd53719c6d4" />
 </a>
