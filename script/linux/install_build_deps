@@ -1,70 +1,24 @@
 #!/usr/bin/env bash
-#
-# Install all dependencies required to build Warp on Linux.
+set -euo pipefail
 
-set -e
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+cd "$REPO_ROOT"
+source ./script/warp_sudo
 
-. "$PWD/script/warp_sudo"
-
-# Define some control sequences for text formatting.
-red="\033[0;31m"
-reset="\033[0m"
-
-# Install some development libraries that will be needed in the compilation
-# process.
-UNAME="$(uname -a)"
-if [[ "$(source /etc/os-release; echo $ID $ID_LIKE)" = *"debian"* ]]; then
-  echo "⬇️  Installing build-time dependencies..."
-  # Define the packages to install as a bash array so we can include
-  # comments between lines.
-  PACKAGES=(
-    curl
-    git
-    # Install various core packages for development work on Linux.
-    build-essential cmake pkg-config
-    # Make it so that running `python` runs `python3`.
-    python-is-python3
-    # Development headers for various libraries, needed when compiling
-    # certain Rust crate dependencies.
-    libssl-dev libfreetype-dev libexpat1-dev libgit2-dev
-    # libs needed for loading system fonts
-    libfontconfig1-dev
-    # Needed in wasm compilation for parsing the version of wasm-bindgen
-    jq
-    # Needed for compressing web bundles
-    brotli
-    # Needed for voice input
-    libasound2-dev
-    # Needed by bindgen (used by minimp4-sys, pulled in by warpui_core's
-    # integration_tests feature) — pulls in libclang-common-*-dev which
-    # provides clang's resource-dir builtin headers.
-    libclang-dev
-    # Required by script/presubmit's clang-format check on C/C++/Obj-C sources.
-    clang-format
-    # Required to build statically-linked binaries for Linux.
-    musl-tools
-  )
-  warp_sudo apt-get install -y "${PACKAGES[@]}"
-
-  # Install a modern version of protoc. The apt 'protobuf-compiler' package on
-  # Ubuntu 20.04 ships protoc 3.6.1, which is too old for proto3 'optional'
-  # fields (requires protoc >= 3.15).
-  PROTOC_VERSION="25.1"
-  case "$(uname -m)" in
-    x86_64)  PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip" ;;
-    aarch64) PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-aarch_64.zip" ;;
-    *)       echo "Unsupported architecture for protoc: $(uname -m)"; exit 1 ;;
-  esac
-  curl -fsSL -o /tmp/protoc.zip \
-    "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
-  warp_sudo unzip -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
-  rm /tmp/protoc.zip
-else
-  echo -e "⚠️  ${red}Unknown Linux distribution; necessary build dependencies may not be installed!${reset}"
+if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
+  echo "This branch supports Linux x86_64 only." >&2
+  exit 1
+fi
+source /etc/os-release
+if [[ " $ID ${ID_LIKE:-} " != *" arch "* ]]; then
+  echo "This bootstrap supports Arch Linux and derivatives, including Omarchy." >&2
+  exit 1
 fi
 
-# Install Rust.
-"$PWD"/script/install_rust
-
-# Install various build-time dependencies through cargo.
-"$PWD"/script/install_cargo_build_deps
+# Keep the host's existing GPU driver; the Vulkan loader uses its installed ICD.
+PACKAGES=(
+  base-devel cmake pkgconf curl git git-lfs python rustup
+  openssl freetype2 expat libgit2 fontconfig alsa-lib clang protobuf sqlite
+  libx11 libxcb libxi libxcursor libxkbcommon-x11 wayland libglvnd vulkan-icd-loader
+)
+warp_sudo pacman -S --needed --noconfirm "${PACKAGES[@]}"

@@ -1,3 +1,32 @@
+## Personal fork: Linux x86_64
+
+This branch provides a native GUI build for Arch Linux and derivatives such as Omarchy on
+x86_64. Personal appearance and behavior changes belong on a separate branch based on this
+one. Shared platform code remains to ease upstream updates; other platforms are not maintained
+on this branch. Windows runtime binaries and debug symbols have been removed.
+
+Start with an up-to-date Arch system and an installed GPU driver compatible with Vulkan:
+
+```sh
+./script/bootstrap       # Arch build/runtime packages, Git LFS models, pinned Rust toolchain
+./script/run --build     # compile without launching
+./script/run             # compile and launch in your desktop session
+./script/run --release   # optional optimized build
+```
+
+Bootstrap uses sudo for missing system packages. It installs neither test/packaging tools nor
+agent skills, and does not require gcloud or private Warp channel configuration. The run script
+always builds the public `warp-oss` GUI binary for `x86_64-unknown-linux-gnu`, preserving the
+upstream product features. Cargo options follow `./script/run`; application options follow `--`.
+The build-only `--build` option must come first. Rust is pinned by `rust-toolchain.toml`.
+
+The executable is under `target/x86_64-unknown-linux-gnu/debug/warp-oss` (or `release/`). Run it
+from an active Wayland or X11 desktop session. Build output can use substantially more disk
+space than the checkout. Removing Windows assets does not remove them from Git history.
+Upstream CI/release workflows remain as reference and require Warp infrastructure.
+
+---
+
 <a href="https://www.warp.dev">
     <img width="1024" alt="Warp Agentic Development Environment product preview" src="https://github.com/user-attachments/assets/9976b2da-2edd-4604-a36c-8fd53719c6d4" />
 </a>
@@ -73,9 +102,9 @@ Once filed, a Warp maintainer reviews the issue and may apply a readiness label:
 To build and run Warp from source:
 
 ```bash
-./script/bootstrap   # platform-specific setup
+./script/bootstrap   # Arch Linux x86_64 build/runtime setup
+./script/run --build # build the public GUI binary
 ./script/run         # build and run Warp
-./script/presubmit   # fmt, clippy, and tests
 ```
 
 See [AGENTS.md](AGENTS.md) for the full engineering guide, including coding style, testing, and platform-specific notes.

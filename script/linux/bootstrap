@@ -1,25 +1,33 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
+cd "$REPO_ROOT"
 
-. "$PWD/script/warp_sudo"
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      echo "Usage: ./script/bootstrap [-y|--yes]"
+      echo "Install build/runtime dependencies and the pinned Rust toolchain for Arch Linux x86_64."
+      exit 0
+      ;;
+    -y|--yes) export WARP_SKIP_SUDO_PROMPT=1 ;;
+    *) echo "Unknown argument: $arg" >&2; exit 1 ;;
+  esac
+done
 
-# Update the apt cache before installing dependencies.  It can be slow, so the install scripts
-# don't do it (to avoid doing it more than once).
-warp_sudo apt update -y
+./script/linux/install_build_deps
 
-# Install all dependencies needed to build, run, and test Warp.
-"$PWD"/script/linux/install_test_deps
+git lfs install --local
+# Windows debug symbols are absent from this branch; only fetch shared model assets.
+git lfs pull --include="crates/input_classifier/models/**"
 
-# Install linuxdeploy.
-"$PWD"/script/linux/install_linuxdeploy
-
-# Make sure we're authenticated with the gcloud CLI, otherwise SSH integration
-# tests won't work.
-if [[ "${WARP_SKIP_GCLOUD_AUTH:-0}" != "1" ]] && [[ -z "$(gcloud auth print-identity-token)" ]]; then
-    echo "gcloud CLI authentication missing.  Press enter to continue..."
-    read var
-    gcloud auth login
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+if ! command -v rustup >/dev/null 2>&1; then
+  echo "rustup is required. Install it with: sudo pacman -S --needed rustup" >&2
+  exit 1
 fi
+rustup show active-toolchain
+rustup component add clippy rustfmt
 
-echo "✅ Your machine is bootstrapped and ready to go. :)"
+echo "Ready. Run ./script/run --build to compile, or ./script/run to compile and launch."
