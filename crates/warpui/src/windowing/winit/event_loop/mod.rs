@@ -1100,7 +1100,7 @@ impl EventLoop {
             }
             ConvertedEvent::WindowMoved { new_position } => {
                 let window = downcast_window(window.as_ref());
-                let scale_factor = self.ui_app.update(|ctx| {
+                let scale_factor = self.ui_app.read(|ctx| {
                     ctx.windows()
                         .platform_window(window_state.window_id)
                         .expect("window should exist")
@@ -1138,7 +1138,7 @@ impl EventLoop {
         evt: winit::event::WindowEvent,
     ) -> Option<ConvertedEvent> {
         let window_state = self.state.windows.get_mut(&window_id)?;
-        let scale_factor = self.ui_app.update(|ctx| {
+        let scale_factor = self.ui_app.read(|ctx| {
             ctx.windows()
                 .platform_window(window_state.window_id)
                 .expect("window should exist")

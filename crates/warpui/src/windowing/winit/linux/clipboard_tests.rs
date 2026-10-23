@@ -4,6 +4,8 @@
 /// to avoid duplication. These tests focus on Linux-specific clipboard behavior.
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod clipboard_tests {
+    use std::borrow::Cow;
+
     use crate::clipboard::{Clipboard, ClipboardContent};
     use crate::windowing::winit::linux::LinuxClipboard;
 
@@ -120,6 +122,44 @@ mod clipboard_tests {
             assert!(matches!(read_content.images, None | Some(_)));
             assert!(matches!(read_content.html, None | Some(_)));
         });
+    }
+
+    #[test]
+    #[ignore = "requires an isolated X11 display (without WAYLAND_DISPLAY) and serial execution"]
+    fn primary_text_is_independent_of_regular_clipboard() {
+        let mut clipboard = LinuxClipboard::new().expect("isolated X11 clipboard is available");
+        clipboard.write(ClipboardContent::plain_text("Copied text".to_string()));
+        clipboard
+            .write_to_primary_clipboard(ClipboardContent::plain_text("Selected text".to_string()));
+
+        assert_eq!(
+            clipboard.read_from_primary_clipboard().plain_text,
+            "Selected text"
+        );
+        assert_eq!(clipboard.read().plain_text, "Copied text");
+    }
+
+    #[test]
+    #[ignore = "requires an isolated X11 display (without WAYLAND_DISPLAY) and serial execution"]
+    fn primary_paste_does_not_include_regular_clipboard_images() {
+        let mut native_clipboard =
+            arboard::Clipboard::new().expect("isolated X11 clipboard is available");
+        native_clipboard
+            .set_image(arboard::ImageData {
+                width: 1,
+                height: 1,
+                bytes: Cow::Borrowed(&[255, 0, 0, 255]),
+            })
+            .expect("regular clipboard accepts the image");
+        let mut clipboard = LinuxClipboard::new().expect("isolated X11 clipboard is available");
+        clipboard
+            .write_to_primary_clipboard(ClipboardContent::plain_text("Selected text".to_string()));
+
+        let primary = clipboard.read_from_primary_clipboard();
+
+        assert_eq!(primary.plain_text, "Selected text");
+        assert!(primary.images.is_none());
+        assert!(clipboard.read().images.is_some());
     }
 
     #[test]

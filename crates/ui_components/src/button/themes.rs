@@ -1,6 +1,7 @@
 use pathfinder_color::ColorU;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::color::coloru_with_opacity;
+use warp_core::ui::design;
 use warp_core::ui::theme::Fill;
 use warp_core::ui::theme::color::internal_colors;
 
@@ -62,8 +63,8 @@ impl Theme for Secondary {
     fn background(&self, button_state: super::State, appearance: &Appearance) -> Option<Fill> {
         match button_state {
             super::State::Default => None,
-            super::State::Hovered => Some(internal_colors::fg_overlay_2(appearance.theme())),
-            super::State::Pressed => Some(internal_colors::fg_overlay_3(appearance.theme())),
+            super::State::Hovered => Some(design::hover_background(appearance.theme())),
+            super::State::Pressed => Some(design::selected_background(appearance.theme())),
         }
     }
 
@@ -72,7 +73,7 @@ impl Theme for Secondary {
     }
 
     fn border(&self, appearance: &Appearance) -> Option<ColorU> {
-        Some(internal_colors::neutral_4(appearance.theme()))
+        Some(design::control_border(appearance.theme()).into_solid())
     }
 
     fn keyboard_shortcut_background(&self, appearance: &Appearance) -> Option<ColorU> {
@@ -108,8 +109,8 @@ impl Theme for Naked {
     fn background(&self, button_state: super::State, appearance: &Appearance) -> Option<Fill> {
         match button_state {
             super::State::Default => None,
-            super::State::Hovered => Some(internal_colors::fg_overlay_2(appearance.theme())),
-            super::State::Pressed => Some(internal_colors::fg_overlay_3(appearance.theme())),
+            super::State::Hovered => Some(design::hover_background(appearance.theme())),
+            super::State::Pressed => Some(design::selected_background(appearance.theme())),
         }
     }
 

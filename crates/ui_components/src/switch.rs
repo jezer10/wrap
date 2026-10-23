@@ -1,21 +1,11 @@
-use std::sync::LazyLock;
-
 use warp_core::ui::appearance::Appearance;
+use warp_core::ui::design;
+use warp_core::ui::theme::Fill;
 use warpui_core::elements::{MouseStateHandle, Rect};
 use warpui_core::prelude::stack::*;
 use warpui_core::prelude::*;
 
 use crate::{Component, MouseEventHandler, Renderable};
-
-/// The color of the switch's track when it is unchecked.
-static TRACK_COLOR: LazyLock<ColorU> = LazyLock::new(|| ColorU::new(170, 170, 170, 255));
-/// The drop shadow to apply to the switch's thumb when it is hovered.
-static DROP_SHADOW: LazyLock<DropShadow> = LazyLock::new(|| DropShadow {
-    color: ColorU::black(),
-    offset: vec2f(-0.5, 2.),
-    blur_radius: 20.,
-    spread_radius: 0.,
-});
 
 #[derive(Default)]
 pub struct Switch {
@@ -103,16 +93,13 @@ impl Switch {
         )
         .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)));
 
-        let background_color = if params.checked {
-            appearance.theme().accent().into()
-        } else {
-            Fill::Solid(*TRACK_COLOR)
-        };
+        let background_color =
+            design::switch_track(appearance.theme(), params.checked, params.options.disabled);
 
         Stack::new()
             .with_child(track.with_background(background_color).finish())
             .with_positioned_child(
-                self.render_thumb(params),
+                self.render_thumb(appearance, background_color, params),
                 Self::thumb_positioning(params.checked),
             )
             .finish()
@@ -135,17 +122,22 @@ impl Switch {
 
     // Renders the thumb. The thumb needs its own hoverable to render a border around itself when
     // hovered.
-    fn render_thumb(&self, params: &Params<'_>) -> Box<dyn Element> {
+    fn render_thumb(
+        &self,
+        appearance: &Appearance,
+        track_color: Fill,
+        params: &Params<'_>,
+    ) -> Box<dyn Element> {
         let thumb_height = params.options.height;
         let is_disabled = params.options.disabled;
-        let thumb_color = Fill::Solid(ColorU::white());
+        let thumb_color = appearance.theme().font_color(track_color);
         Hoverable::new(self.thumb_mouse_state.clone(), |state| {
             let thumb = Container::new(
                 ConstrainedBox::new(
                     Rect::new()
                         .with_background(thumb_color)
                         .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
-                        .with_drop_shadow(*DROP_SHADOW)
+                        .with_drop_shadow(design::control_shadow(appearance.theme()))
                         .finish(),
                 )
                 .with_width(thumb_height)
@@ -161,7 +153,7 @@ impl Switch {
                 && !is_disabled
                 && state.is_mouse_over_element()
             {
-                Self::add_thumb_hover(&mut stack, thumb_height, border_size);
+                Self::add_thumb_hover(appearance, &mut stack, thumb_height, border_size);
             }
 
             stack.add_child(thumb);
@@ -171,15 +163,19 @@ impl Switch {
     }
 
     /// Adds the hovered thumb border to the given stack.
-    fn add_thumb_hover(stack: &mut Stack, thumb_height: f32, border_size: f32) {
-        let mut hover_background = *TRACK_COLOR;
-        hover_background.a = 100;
+    fn add_thumb_hover(
+        appearance: &Appearance,
+        stack: &mut Stack,
+        thumb_height: f32,
+        border_size: f32,
+    ) {
+        let hover_background = appearance.theme().foreground().with_opacity(10);
 
         let hover_size = thumb_height + border_size;
 
         let thumb_hover = ConstrainedBox::new(
             Rect::new()
-                .with_background_color(hover_background)
+                .with_background(hover_background)
                 .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
                 .finish(),
         )

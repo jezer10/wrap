@@ -65,7 +65,7 @@ impl Clipboard for WindowsClipboard {
 
         // Try to get image content from clipboard
         content.images = crate::clipboard_utils::read_images_from_clipboard(
-            &mut self.inner,
+            self.inner.get(),
             &content.html,
             &content.plain_text,
         );

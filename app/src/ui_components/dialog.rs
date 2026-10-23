@@ -1,3 +1,4 @@
+use warp_core::ui::design::{SURFACE_RADIUS, subtle_border};
 use warpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Flex,
     MainAxisAlignment, MainAxisSize, ParentElement, Shrinkable, Text,
@@ -31,15 +32,15 @@ pub struct Dialog {
 
 pub fn dialog_styles(appearance: &Appearance) -> UiComponentStyles {
     let theme = appearance.theme();
-    let background = theme.surface_1();
+    let background = theme.background().into_solid();
     UiComponentStyles {
         font_family_id: Some(appearance.header_font_family()),
         font_size: Some(16.),
         font_color: Some(blended_colors::text_main(theme, background)),
         font_weight: Some(warpui::fonts::Weight::Bold),
         background: Some(background.into()),
-        border_color: Some(theme.surface_3().into()),
-        border_radius: Some(CornerRadius::with_all(warpui::elements::Radius::Pixels(8.))),
+        border_color: Some(subtle_border(theme).into()),
+        border_radius: Some(CornerRadius::with_all(SURFACE_RADIUS)),
         border_width: Some(1.),
         ..Default::default()
     }

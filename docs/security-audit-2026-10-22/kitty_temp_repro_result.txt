@@ -1,0 +1,4 @@
+lexical_temp=true
+synthetic_read=20
+target_exists=false
+Target was synthetic and outside /tmp, /var/tmp and /dev/shm. No real files were deleted.

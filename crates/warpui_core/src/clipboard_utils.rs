@@ -298,13 +298,13 @@ pub fn process_clipboard_image(
 /// Read image data from clipboard, checking for images before expensive filename extraction.
 #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
 pub fn read_images_from_clipboard(
-    clipboard: &mut arboard::Clipboard,
+    clipboard: arboard::Get<'_>,
     html_content: &Option<String>,
     text_content: &str,
 ) -> Option<Vec<crate::clipboard::ImageData>> {
     // First, quickly check if there are any images in the clipboard
     // This is a fast operation that avoids filename extraction overhead
-    match clipboard.get().image() {
+    match clipboard.image() {
         Ok(arboard_image) => {
             // Images found! Now extract filename from clipboard content
             let filename = extract_filename_from_clipboard_content(html_content, text_content);

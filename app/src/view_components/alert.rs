@@ -1,16 +1,15 @@
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::color::internal_colors;
+use warp_core::ui::design;
 use warpui::Element;
 use warpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon, MainAxisSize,
-    ParentElement, Radius, Shrinkable,
+    ParentElement, Shrinkable,
 };
 use warpui::ui_components::components::{UiComponent, UiComponentStyles};
 
 use crate::appearance::Appearance;
 use crate::themes::theme::Fill;
 
-const ALERT_CORNER_RADIUS: f32 = 4.;
 const ALERT_VERTICAL_PADDING: f32 = 8.;
 const ALERT_HORIZONTAL_PADDING: f32 = 12.;
 const ALERT_ICON_RIGHT_MARGIN: f32 = 8.;
@@ -43,7 +42,7 @@ impl AlertFlavor {
     pub fn text_color(&self, appearance: &Appearance) -> ColorU {
         let theme = appearance.theme();
         match self {
-            AlertFlavor::Default => theme.main_text_color(theme.background()).into(),
+            AlertFlavor::Default => theme.main_text_color(theme.surface_2()).into(),
             AlertFlavor::Warning => theme.ansi_fg_yellow(),
             _ => theme.background().into(),
         }
@@ -52,7 +51,7 @@ impl AlertFlavor {
     pub fn bg_color(&self, appearance: &Appearance) -> Fill {
         let theme = appearance.theme();
         match self {
-            Self::Default => internal_colors::neutral_4(theme).into(),
+            Self::Default => theme.surface_2(),
             Self::Success => theme.ansi_fg_green().into(),
             Self::Error => theme.ansi_fg_red().into(),
             Self::Warning => theme.yellow_overlay_1(),
@@ -62,7 +61,7 @@ impl AlertFlavor {
     pub fn border_color(&self, appearance: &Appearance) -> Fill {
         let theme = appearance.theme();
         match self {
-            AlertFlavor::Default => internal_colors::neutral_3(theme).into(),
+            AlertFlavor::Default => design::subtle_border(theme),
             AlertFlavor::Success => theme.ansi_bg_green().into(),
             AlertFlavor::Error => theme.ansi_bg_red().into(),
             AlertFlavor::Warning => Fill::Solid(ColorU::transparent_black()),
@@ -100,7 +99,7 @@ impl Alert {
             .with_vertical_padding(ALERT_VERTICAL_PADDING)
             .with_horizontal_padding(ALERT_HORIZONTAL_PADDING)
             .with_background(config.flavor.bg_color(appearance))
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(ALERT_CORNER_RADIUS)))
+            .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
             .with_border(Border::all(1.).with_border_fill(config.flavor.border_color(appearance)))
             .finish()
     }

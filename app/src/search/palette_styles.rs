@@ -1,5 +1,6 @@
 use warp_core::ui::appearance::Appearance;
-use warpui::elements::{Border, CornerRadius, DropShadow, Radius, ScrollbarWidth};
+use warp_core::ui::design::{CONTROL_RADIUS, subtle_border};
+use warpui::elements::{Border, CornerRadius, ScrollbarWidth};
 
 use crate::search::result_renderer::QueryResultRendererStyles;
 
@@ -24,8 +25,6 @@ pub const PALETTE_HEIGHT: f32 = 464.;
 pub const PALETTE_WIDTH: f32 = 640.;
 
 lazy_static::lazy_static! {
-    pub static ref DROP_SHADOW: DropShadow = DropShadow::default();
-
     pub static ref QUERY_RESULT_RENDERER_STYLES: QueryResultRendererStyles =
         QueryResultRendererStyles {
             result_item_height_fn: |appearance| {
@@ -45,7 +44,7 @@ lazy_static::lazy_static! {
                 RESULT_PADDING_VERTICAL + MULTILINE_RESULT_EXTRA_VERTICAL_PADDING,
             // Figma "Palette Menu Item" applies an outer gutter so the highlight doesn't look full-bleed.
             result_outer_horizontal_padding_fn: |appearance| 4.0 * appearance.monospace_ui_scalar(),
-            item_highlight_corner_radius: CornerRadius::with_all(Radius::Pixels(4.)),
+            item_highlight_corner_radius: CornerRadius::with_all(CONTROL_RADIUS),
             ..Default::default()
         };
 
@@ -53,5 +52,5 @@ lazy_static::lazy_static! {
 
 /// Returns the `Border` for both the search results panel and details panel.
 pub fn panel_border(appearance: &Appearance) -> Border {
-    Border::all(1.).with_border_fill(appearance.theme().outline())
+    Border::all(1.).with_border_fill(subtle_border(appearance.theme()))
 }

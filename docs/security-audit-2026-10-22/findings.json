@@ -1,0 +1,376 @@
+{
+  "date": "2026-10-22",
+  "timezone": "America/Lima",
+  "repository": "/home/jzr/Projects/wrap",
+  "base_commit": "3b7f20ecbfc4a2f9feadadb227410354791a357d",
+  "scope": "Revisión transversal basada en riesgo de un workspace de 81 crates; no es lectura exhaustiva de cada línea ni certificación de ausencia de vulnerabilidades.",
+  "workspace_note": "El árbol ya tenía cambios locales y continuó cambiando durante la revisión. No se editó código ni lockfiles. Los hashes adjuntos representan los archivos al guardar este informe; cambios posteriores requieren reevaluación.",
+  "counts": {
+    "high": 5,
+    "medium": 6
+  },
+  "findings": [
+    {
+      "id": "S01",
+      "severity": "Alta / P1",
+      "title": "La aprobación obligatoria de escritura MCP se puede eludir con rutas alternativas",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/blocklist/action_model/execute/request_file_edits.rs",
+          "line": 86
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/blocklist/permissions.rs",
+          "line": 779
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/mcp/mod.rs",
+          "line": 571
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_files/src/lib.rs",
+          "line": 172
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/mcp/file_based_manager.rs",
+          "line": 405
+        }
+      ],
+      "conditions": "Sesión local con escritura automática o autoaprobación. El agente solicita un alias de una configuración protegida: ruta relativa, ~ o enlace simbólico. No se presupone que la configuración predeterminada permita autoescritura.",
+      "impact": "El control compara la ruta original, pero la escritura posterior normaliza y resuelve el destino. Se puede modificar una configuración MCP sin la aprobación adicional exigida. Los servidores de la configuración global de Warp pueden arrancar automáticamente al ser cargados.",
+      "evidence": "Trazado completo de permiso a escritura. Arnés Rust aislado con el clasificador real y un hogar sintético: la ruta directa se reconoce; config.toml relativo, ~/.claude.json y un enlace con otro nombre no se reconocen. La escritura por el alias cambia el destino protegido. No es una prueba integrada de la aplicación.",
+      "remediation": "Resolver directorio actual, ~, enlaces y padres existentes antes de autorizar. Comprobar el destino efectivo y vincular la verificación al archivo que finalmente se abre; cubrir también archivos nuevos y cambios entre comprobación y uso."
+    },
+    {
+      "id": "S02",
+      "severity": "Alta / P1",
+      "title": "El almacenamiento alternativo de credenciales usa una clave global pública",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warpui_extras/src/secure_storage/linux.rs",
+          "line": 103
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warpui_extras/src/secure_storage/linux.rs",
+          "line": 234
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warpui_extras/src/secure_storage/linux.rs",
+          "line": 292
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_server_auth/src/user/persistence.rs",
+          "line": 68
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/persistence/sqlite.rs",
+          "line": 362
+        }
+      ],
+      "conditions": "Linux/FreeBSD: Secret Service no está disponible o falla. El atacante obtiene una copia del archivo; otro usuario local puede leerlo si los directorios superiores son transitables y la umask permite lectura.",
+      "impact": "AES-GCM deriva siempre la misma clave de una constante incluida en el código. Quien consiga el archivo puede recuperar refresh tokens o claves BYO. La escritura genérica tampoco impone 0600; con umask 022 crea archivos 0644. La variante de permisos reforzados no se usa para login/BYO.",
+      "evidence": "Prueba con Node crypto y datos sintéticos: descifrado con la clave del fuente correcto; directorio 0755 y archivo 0644 bajo umask 022. Se trazó el registro por defecto del fallback y los callers de persistencia. No se leyeron credenciales reales.",
+      "remediation": "Eliminar el cifrado con clave global; usar protección vinculada al usuario/OS o no persistir si falta un almacén seguro. Aplicar 0700/0600 en todos los caminos, migrar archivos existentes y evaluar rotación cuando haya evidencia de exposición. Cambiar permisos por sí solo no protege copias filtradas."
+    },
+    {
+      "id": "S03",
+      "severity": "Alta / P1",
+      "title": "Kitty puede borrar archivos fuera de los directorios temporales",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/kitty.rs",
+          "line": 739
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/kitty.rs",
+          "line": 762
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/kitty.rs",
+          "line": 772
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/ansi/mod.rs",
+          "line": 1618
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/features.rs",
+          "line": 130
+        }
+      ],
+      "conditions": "El usuario muestra salida de terminal maliciosa con Kitty habilitado, configuración predeterminada fuera de Windows. Debe existir un directorio intermedio transitable que contenga el marcador tty-graphics-protocol; otro usuario local puede crearlo en /tmp. El proceso víctima debe poder leer y borrar el destino. Un atacante exclusivamente remoto necesita un directorio apropiado ya existente o poder prepararlo.",
+      "impact": "La comprobación usa prefijos de texto y un marcador en cualquier parte de la ruta, sin resolver .. ni enlaces. read_file lee y elimina el archivo antes de validar su formato de imagen. El destino puede quedar fuera de /tmp, /var/tmp y /dev/shm.",
+      "evidence": "Se extrajeron y compilaron las funciones reales safe_delete_temp_file/is_path_in_temp_dir. Un archivo exclusivamente sintético bajo ~/.cache fue leído y eliminado mediante una ruta con .. desde el temporal: lexical_temp=true, synthetic_read=20, target_exists=false. No se ejecutó una secuencia maliciosa contra la GUI.",
+      "remediation": "Validar el directorio canónico y el nombre del archivo; evitar seguir enlaces y utilizar operaciones relativas a un descriptor de directorio validado. Mantener el control de identidad hasta el borrado. No confiar en prefijos de strings."
+    },
+    {
+      "id": "S04",
+      "severity": "Alta / P1",
+      "title": "Docubot ejecuta una acción del PR con credenciales privilegiadas",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/docubot_reply_to_comment.yml",
+          "line": 32
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/docubot_reply_to_comment.yml",
+          "line": 52
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/docubot_reply_to_comment.yml",
+          "line": 62
+        }
+      ],
+      "conditions": "Un mantenedor ejecuta manualmente workflow_dispatch indicando el número de un PR controlado por un tercero. Los triggers automáticos por comentarios están desactivados.",
+      "impact": "Se descarga refs/pull/N/head y se ejecuta ./.github/actions/docubot de esa misma revisión, entregándole una clave Warp, un PAT y permisos de escritura/OIDC. El autor del PR puede modificar la acción que recibirá esos privilegios.",
+      "evidence": "Trazado estático verificado independientemente: checkout del PR → acción local modificable → inputs secretos. No se activó ningún workflow ni se usó ningún secreto. No se afirma ejecución automática al abrir un PR.",
+      "remediation": "Ejecutar acciones y scripts de una revisión confiable e inmutable. Descargar el PR en otra ubicación y tratarlo como datos, sin ejecutar sus instrucciones, dependencias o configuración con secretos privilegiados. Reducir permisos y separar la evaluación no confiable."
+    },
+    {
+      "id": "S05",
+      "severity": "Alta / P1",
+      "title": "Los enlaces externos new_tab/new_window pueden ejecutar archivos locales",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/uri/mod.rs",
+          "line": 1004
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/uri/mod.rs",
+          "line": 1339
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/uri/mod.rs",
+          "line": 1448
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/uri/mod.rs",
+          "line": 1530
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/terminal/input.rs",
+          "line": 7709
+        }
+      ],
+      "conditions": "El sistema entrega a Warp un enlace externo con path hacia un ejecutable existente. Puede haber un aviso del navegador para abrir Warp. En Unix el archivo debe ser ejecutable; en Windows los archivos .cmd/.bat/.ps1 pueden ser ejecutables sin bit Unix.",
+      "impact": "La intención de abrir pestaña/ventana llama al mismo flujo que ejecutar archivos. Se encola y ejecuta el comando al terminar el arranque del shell, sin una confirmación interna específica de ejecución. La ruta se escapa: no se demuestra inyección de argumentos.",
+      "evidence": "Trazado estático new_tab/new_window → open_file → ExecuteInSession → set_pending_command → BootstrapPrecmdDone → try_execute_command. Los tests existentes corroboran la decisión de enrutado. No se hizo reproducción GUI ni en Windows.",
+      "remediation": "Exigir que path sea directorio en estas intenciones. Separar abrir archivo de ejecutarlo, y exigir confirmación explícita para ejecutar contenido solicitado por un enlace externo."
+    },
+    {
+      "id": "S06",
+      "severity": "Media / P2",
+      "title": "MCP reenvía claves de API personalizadas al destino de una redirección",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/crates/mcp/src/runtime.rs",
+          "line": 81
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/mcp/src/runtime.rs",
+          "line": 169
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/mcp/src/runtime.rs",
+          "line": 554
+        }
+      ],
+      "conditions": "El usuario configura x-api-key/api-key y el servidor MCP responde con una redirección a otro origen, por ejemplo por una redirección abierta o una migración a un tercero.",
+      "impact": "El cliente instala las cabeceras como defaults y conserva la política de redirección predeterminada. Reqwest elimina Authorization en el cambio de origen, pero mantiene estas claves personalizadas, que recibe otro servidor.",
+      "evidence": "Prueba dinámica con reqwest 0.13.5 del cache, dos servidores loopback y valores ficticios: cross_origin_x_api_key_received=true; cross_origin_authorization_received=false. Se validó la biblioteca y el constructor usado; no un servidor MCP real.",
+      "remediation": "Restringir redirecciones al origen autorizado o inyectar credenciales únicamente para ese origen. Prohibir también degradaciones HTTPS→HTTP."
+    },
+    {
+      "id": "S07",
+      "severity": "Media / P2",
+      "title": "El cliente de control local envía tokens y cuerpo al proxy HTTP del entorno",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/crates/local_control/src/client.rs",
+          "line": 46
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/local_control/src/client.rs",
+          "line": 54
+        }
+      ],
+      "conditions": "HTTP_PROXY/http_proxy está configurado sin una exclusión efectiva de localhost en NO_PROXY. El registro de descubrimiento puede ser totalmente válido y seguir apuntando a 127.0.0.1.",
+      "impact": "Client::new honra el proxy: el bearer de cinco minutos, limitado a una acción, y los parámetros de operación pueden salir del equipo hacia el proxy. El listener sigue siendo loopback; no se demuestra control remoto ni ejecución remota de comandos.",
+      "evidence": "Prueba dinámica del constructor blocking real con un proxy loopback y token ficticio: loopback_request_sent_to_proxy=true; scoped_credential_received_by_proxy=true.",
+      "remediation": "Usar un cliente dedicado con no_proxy(), redirecciones deshabilitadas y timeout acotado. Mantener la validación del destino loopback."
+    },
+    {
+      "id": "S08",
+      "severity": "Media / P2",
+      "title": "Un enlace simbólico elude el alcance de lectura aprobado para el agente",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/blocklist/permissions.rs",
+          "line": 738
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/blocklist/permissions.rs",
+          "line": 758
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/ai/blocklist/action_model/execute/read_files.rs",
+          "line": 67
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_files/src/lib.rs",
+          "line": 612
+        }
+      ],
+      "conditions": "AlwaysAsk con directorio permitido, o permiso temporal sobre un directorio. Existe dentro de ese directorio un enlace hacia un archivo externo; puede venir de un repositorio no confiable.",
+      "impact": "Path::starts_with acepta el alias, mientras File::open sigue el enlace. El contenido externo llega al agente sin la aprobación que correspondería a su ubicación real. No es un escape de sandbox y no amplía configuraciones que ya autorizan cualquier lectura.",
+      "evidence": "Arnés Rust local con archivos ficticios: el prefijo autorizado acepta el alias y la apertura devuelve el marcador de un archivo fuera del directorio permitido. Recorrido de permisos y lectura verificado estáticamente.",
+      "remediation": "Autorizar la identidad canónica del archivo en el sistema de archivos correspondiente y mantener la relación con el descriptor abierto; añadir regresiones de enlaces y sustituciones entre comprobación y acceso."
+    },
+    {
+      "id": "S09",
+      "severity": "Media / P2",
+      "title": "El control OWNERS confía en el archivo modificado por el propio PR",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/check_approvals.yml",
+          "line": 16
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/check_approvals.yml",
+          "line": 43
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/.github/workflows/check_approvals.yml",
+          "line": 68
+        }
+      ],
+      "conditions": "Un contribuidor modifica o añade OWNERS en su PR. El checkout contiene esa modificación y la lista de aprobadores incluye al propio autor.",
+      "impact": "Añadir el autor como owner satisface el control para el cambio y para el propio OWNERS. Se elude este gate personalizado; no se demuestra evasión de protecciones nativas de rama o CODEOWNERS.",
+      "evidence": "Se ejecutó el bloque shell original en un directorio temporal: owners originales → exit 1; sustituir por el autor → exit 0, sin reseñas externas.",
+      "remediation": "Leer la política de OWNERS desde la base confiable del PR. Exigir aprobación de los propietarios anteriores para cambios en esa política y evaluar el estado vigente de las revisiones."
+    },
+    {
+      "id": "S10",
+      "severity": "Media / P2",
+      "title": "Un patrón corto personalizado debilita la redacción de secretos existente",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/server/telemetry/secret_redaction.rs",
+          "line": 77
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/server/telemetry/secret_redaction.rs",
+          "line": 94
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/secret_redaction/src/lib.rs",
+          "line": 118
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/secret_redaction/src/lib.rs",
+          "line": 196
+        }
+      ],
+      "conditions": "Se configuran patrones que se solapan y se envía contenido mediante telemetría UGC habilitada o una petición AI con redacción habilitada. No se afirma exposición bajo los defaults aislados.",
+      "impact": "Los patrones se combinan con prioridad; find_iter devuelve coincidencias no superpuestas. Un patrón anterior que solo cubra el prefijo desplaza al patrón completo. La unión posterior no recupera la coincidencia descartada.",
+      "evidence": "Prueba Rust con regex-automata 0.4.9 del lockfile: un PAT totalmente ficticio de 40 bytes queda oculto por defecto (0..40); añadir un patrón para ghp_ solo oculta 0..4 y deja 36 bytes del secreto sintético intactos.",
+      "remediation": "Calcular la unión de coincidencias de todos los patrones, incluidas las solapadas, antes de reemplazar. Preservar por separado los niveles de prioridad y probar superposiciones parciales y totales."
+    },
+    {
+      "id": "S11",
+      "severity": "Media / P2",
+      "title": "El texto de notificaciones OSC9 se registra sin redacción",
+      "references": [
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/ansi/mod.rs",
+          "line": 918
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/crates/warp_logging/src/native.rs",
+          "line": 549
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/crash_reporting/mod.rs",
+          "line": 303
+        },
+        {
+          "path": "/home/jzr/Projects/wrap/app/src/crash_reporting/mod.rs",
+          "line": 328
+        }
+      ],
+      "conditions": "La salida de terminal incluye contenido sensible en una notificación OSC9. Para la salida a Sentry además deben estar activos crash reporting y un evento posterior que adjunte el breadcrumb.",
+      "impact": "El cuerpo llega a log::info antes de consultar el flag de notificaciones; se guarda localmente y puede adjuntarse a Sentry. before_breadcrumb no elimina el contenido y el scrubber mostrado solo limpia valores de excepciones.",
+      "evidence": "Trazado estático de parser → logger → breadcrumb → callback. No se provocó un envío a Sentry ni se probaron datos reales.",
+      "remediation": "Eliminar el cuerpo del log y registrar metadatos inocuos. Revisar/redactar breadcrumbs como defensa adicional; no confiar en desactivar la notificación visual."
+    }
+  ],
+  "dependency_summary": {
+    "packages": 1574,
+    "registry_packages": 1456,
+    "git_packages": 37,
+    "vulnerability_matches": 25,
+    "distinct_advisories": 20,
+    "affected_package_versions": 12,
+    "unmaintained_warnings": 18,
+    "unsound_warnings": 9,
+    "database": {
+      "advisory-count": 1349,
+      "last-commit": "640bf5a9f06e66d8721e8772766531fe77c8630d",
+      "last-updated": "2026-10-22T12:49:47+02:00"
+    },
+    "npm_packages_checked": 315,
+    "npm_advisories": 4,
+    "npm_package_version_matches": 5
+  },
+  "validation": [
+    "cargo-audit 0.22.2 obtenido de la release oficial y verificado mediante SHA-256; base RustSec descargada en directorio temporal; ejecución --no-yanked --json terminó en exit 1 por avisos.",
+    "Consulta al endpoint bulk de advisories de npm para versiones de yarn.lock; rangos verificados con semver. Solo se enviaron nombres/versiones de paquetes públicos, no código ni credenciales.",
+    "Pruebas aisladas con datos sintéticos: borrado Kitty, gate OWNERS, clasificador/rutas de archivos, cifrado fallback, redacción regex, redirección MCP y proxy de control local.",
+    "cargo nextest run --locked --offline -p local_control --no-fail-fast no llegó a ejecutar tests: el compilador C fue terminado al construir aws-lc-sys (cc1 Killed).",
+    "El reintento con -j 2 quedó esperando un bloqueo de otra compilación concurrente; se detuvo únicamente el proceso de auditoría y su hijo. No se afirma que la suite pase.",
+    "No se ejecutó presubmit, fuzzing, aplicación GUI, pruebas Windows/macOS ni revisión del historial completo. No se atacaron servicios reales ni se utilizaron secretos reales."
+  ],
+  "dependency_reachability": [
+    "rustls-webpki 0.103.15/rustls 0.23.45 aparecen en cadenas de reqwest, websocket y la app. Priorizar la actualización TLS; la explotabilidad de cada advisory depende de raíces y funciones efectivas.",
+    "rkyv llega principalmente por cynic-codegen/proc-macros y build-dependencies.",
+    "quinn-proto no apareció en el árbol activo de la configuración Linux predeterminada; su presencia en Cargo.lock no prueba uso de QUIC en ese binario.",
+    "zip 2.4.2 aparece en node_runtime y warp_logging; la extracción Node revisada usa enclosed_name y copia entradas, no ZipArchive::extract. zip 7.2.0 no apareció en el árbol Linux predeterminado.",
+    "Los avisos npm pertenecen al tooling GraphQL. No se demostró que las funciones vulnerables reciban entrada no confiable ni ejecución remota en el cliente.",
+    "El CI ejecuta cargo deny check licenses en .github/workflows/ci.yml:710, sin advisories. Dependabot está configurado, pero no sustituye un gate de vulnerabilidades. Agregar revisión RustSec/npm y gestionar excepciones justificadas."
+  ],
+  "positive_controls": [
+    "Control local: peer UID, credenciales aleatorias limitadas a acción, validación de Host/Origin y revalidación de permisos; no se encontró bypass de autenticación del servidor en lo revisado.",
+    "Callbacks de autenticación y MCP OAuth verifican estado pendiente; no se estableció bypass OAuth.",
+    "ZIP Node revisado usa enclosed_name; el actualizador macOS comprueba firma/equipo.",
+    "La consola project_console.rs transmite initial_directory sin interpolación de shell; no se encontró inyección en ese flujo.",
+    "La mayoría de acciones CI examinadas se fijan por SHA; el workflow de etiquetado pull_request_target no descarga código del PR."
+  ],
+  "disclosure": "Informe local sin publicación. Para divulgar vulnerabilidades seguir SECURITY.md y usar un canal privado.",
+  "source_sha256": {
+    "/home/jzr/Projects/wrap/.github/workflows/check_approvals.yml": "64c26eab9e5800fbe5e4674243eec1b54653c68984856c2b3272d75adb848817",
+    "/home/jzr/Projects/wrap/.github/workflows/docubot_reply_to_comment.yml": "ace48e6ea5f3b70c389ac19bd85f1c4e26cf46bc596ad651363a29de9d757708",
+    "/home/jzr/Projects/wrap/Cargo.lock": "e377fb77a36bfec19d175c604526a2045b9bc1b3911826ead655430ca7d629bf",
+    "/home/jzr/Projects/wrap/app/src/ai/blocklist/action_model/execute/read_files.rs": "73ad49e31927d0d264fe9f43737b5bcd36cd4a61eb27b9d9fe6482f05d99fdce",
+    "/home/jzr/Projects/wrap/app/src/ai/blocklist/action_model/execute/request_file_edits.rs": "cbd477a7ac56fe0fea021dbbc5d95b3503d868398751c17b8dd615263ff88b54",
+    "/home/jzr/Projects/wrap/app/src/ai/blocklist/permissions.rs": "4bd2919630213c49740e83de5f83e69dd4878e2821759566989ea83971bed651",
+    "/home/jzr/Projects/wrap/app/src/ai/mcp/file_based_manager.rs": "5e36a6c9f79395714e4a23b9c2186700b0bb78938bdbf8da5a54b3a54088bcb5",
+    "/home/jzr/Projects/wrap/app/src/ai/mcp/mod.rs": "b89889af922f4287babd3d3faf94da8a3c13ae86fb838ddf89a7bfd2e77ed5ca",
+    "/home/jzr/Projects/wrap/app/src/crash_reporting/mod.rs": "3a1c3674abdf59bfde609efb8223c641496aca03f8e605771ced14901e858767",
+    "/home/jzr/Projects/wrap/app/src/features.rs": "fe5be5285d5b5ad185b3c30c5ec0e0062f0c1e03bcb4cc4d5d55b53c99706d71",
+    "/home/jzr/Projects/wrap/app/src/persistence/sqlite.rs": "946713ce39489f41591923871aaabcf3ab66e882bb9b95fdff7a07ff41d02c69",
+    "/home/jzr/Projects/wrap/app/src/server/telemetry/secret_redaction.rs": "c1c7f4457eeeb289b9e3f76d241b5b7938f9c67ca5c023cdb40c8ed806faaef9",
+    "/home/jzr/Projects/wrap/app/src/terminal/input.rs": "c0abe79c90eaa4b09e841ec80cf7c3675f6cce2cba15998068f5b319285b287c",
+    "/home/jzr/Projects/wrap/app/src/terminal/view.rs": "93ff94756ad2a0fdf665494d14fa7e47fb0c66ed9dfa3e0ec9f8af96bffa9631",
+    "/home/jzr/Projects/wrap/app/src/uri/mod.rs": "c57d918b49ff081a58c69a9c487e88752982c802cd659c6003de1062b9e7aeb5",
+    "/home/jzr/Projects/wrap/crates/local_control/src/client.rs": "47423134bee79ff2ff3cf2fd8011b3f97e421f2f70c994645123ff9319fda471",
+    "/home/jzr/Projects/wrap/crates/mcp/src/runtime.rs": "796b77ee561f64e82f2b202bfbc16514565ef17532e7b86ec7d971d0fea0198f",
+    "/home/jzr/Projects/wrap/crates/secret_redaction/src/lib.rs": "f0f5d7edb3c04a98c5eb11032a038b1a3d6b710d4c7ed0263c3d2c6833bb9e17",
+    "/home/jzr/Projects/wrap/crates/warp_files/src/lib.rs": "528d30badd0cef94b9e3338dae896714fc6cbb6980eb7873beab18f3a433dce2",
+    "/home/jzr/Projects/wrap/crates/warp_graphql_schema/yarn.lock": "210be9dc0b017080ae74d276b6bb24a092b5f2a00145f19352fbac9232bfcd3f",
+    "/home/jzr/Projects/wrap/crates/warp_logging/src/native.rs": "db21102afa7c0c2724ca27042d9bdc2ff8dba89c76e94fe0ec988dd50c1c54e4",
+    "/home/jzr/Projects/wrap/crates/warp_server_auth/src/user/persistence.rs": "74219390fbd933e5201bc9c2d9d5bf0b8d3460901f847d0adaa75bd44814aba9",
+    "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/ansi/mod.rs": "31c1c2600dde3364ed8034276b1db47f0d8a656c32c478866969118aca1650ef",
+    "/home/jzr/Projects/wrap/crates/warp_terminal/src/model/kitty.rs": "f3e7ab7523dfa060d5adf547b44f179aaeac087a4be1b224e298059282215279",
+    "/home/jzr/Projects/wrap/crates/warpui_extras/src/secure_storage/linux.rs": "e9d674df6607365c24a45608b6880d0a7d9d73a95fa906d011b10c80f50c41e1"
+  }
+}

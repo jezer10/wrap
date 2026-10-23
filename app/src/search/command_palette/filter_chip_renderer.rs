@@ -147,6 +147,7 @@ impl FilterChipRenderer for QueryFilter {
 }
 
 mod styles {
+    use warp_core::ui::design;
     use warpui::elements::{Border, MouseState};
 
     use crate::themes::theme::{Blend, Fill, WarpTheme};
@@ -187,7 +188,7 @@ mod styles {
         if mouse_state.is_hovered() {
             Border::all(HOVERED_BORDER_SIZE).with_border_fill(theme.accent())
         } else {
-            Border::all(BORDER_SIZE).with_border_fill(theme.sub_text_color(theme.surface_2()))
+            Border::all(BORDER_SIZE).with_border_fill(design::control_border(theme))
         }
     }
 

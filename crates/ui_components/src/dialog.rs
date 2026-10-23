@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use warp_core::ui::Icon;
 use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
+use warp_core::ui::design::{SURFACE_RADIUS, popup_shadow, subtle_border};
 use warpui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Flex,
-    ParentElement, Radius, Shrinkable,
+    ParentElement, Shrinkable,
 };
 use warpui_core::fonts::{Properties, Weight};
 use warpui_core::keymap::Keystroke;
@@ -15,7 +15,6 @@ use warpui_core::{AppContext, EventContext};
 
 use crate::{Component, Options as _, Renderable, button};
 
-const CORNER_RADIUS: Radius = Radius::Pixels(8.);
 const BORDER_WIDTH: f32 = 1.;
 
 /// Base unit of dialog padding. The dialog component applies this to the header, but consumers are responsible
@@ -82,9 +81,9 @@ impl Component for Dialog {
         let theme = appearance.theme();
         let options = params.options;
 
-        let background = theme.surface_1();
+        let background = theme.background().into_solid().into();
         let text_color = theme.main_text_color(background).into_solid();
-        let border_color = internal_colors::neutral_4(theme);
+        let border_color = subtle_border(theme);
 
         let mut header_row = Flex::row()
             .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -132,7 +131,7 @@ impl Component for Dialog {
             Container::new(footer.render(appearance))
                 .with_vertical_padding(BASE_PADDING)
                 .with_horizontal_padding(HORIZONTAL_PADDING)
-                .with_border(Border::top(BORDER_WIDTH).with_border_color(border_color))
+                .with_border(Border::top(BORDER_WIDTH).with_border_fill(border_color))
                 .finish()
         });
 
@@ -145,8 +144,9 @@ impl Component for Dialog {
 
         let container = Container::new(body)
             .with_background(background)
-            .with_corner_radius(CornerRadius::with_all(CORNER_RADIUS))
-            .with_border(Border::all(BORDER_WIDTH).with_border_color(border_color))
+            .with_corner_radius(CornerRadius::with_all(SURFACE_RADIUS))
+            .with_border(Border::all(BORDER_WIDTH).with_border_fill(border_color))
+            .with_drop_shadow(popup_shadow(theme))
             .finish();
 
         let sized_container = if let Some(width) = options.width {

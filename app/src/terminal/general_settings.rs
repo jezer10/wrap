@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use warp_core::settings::macros::define_settings_group;
 use warp_core::settings::{RespectUserSyncSetting, SupportedPlatforms, SyncToCloud};
@@ -7,6 +7,14 @@ use crate::banner::BannerState;
 use crate::resource_center::Tip;
 
 define_settings_group!(GeneralSettings, settings: [
+    project_aliases: ProjectAliases {
+        type: HashMap<String, String>,
+        default: HashMap::new(),
+        supported_platforms: SupportedPlatforms::DESKTOP,
+        sync_to_cloud: SyncToCloud::Never,
+        surface: settings::SettingSurfaces::GUI,
+        private: true,
+    },
     show_warning_before_quitting: ShowWarningBeforeQuitting {
         type: bool,
         default: true,

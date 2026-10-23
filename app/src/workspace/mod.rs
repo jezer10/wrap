@@ -733,7 +733,7 @@ pub fn init(app: &mut AppContext) {
             NEW_TERMINAL_TAB_BINDING_NAME,
             BindingDescription::new("New Terminal Tab"),
             WorkspaceAction::AddTerminalTab {
-                hide_homepage: false,
+                hide_homepage: true,
             },
         )
         .with_context_predicate(id!("Workspace") & !id!("Workspace_PaneDragging"))

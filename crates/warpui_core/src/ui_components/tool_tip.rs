@@ -1,14 +1,16 @@
 use pathfinder_color::ColorU;
 
-use crate::elements::{Border, Container, Element, Flex, ParentElement, Text};
+use crate::elements::{
+    Border, Container, CornerRadius, CrossAxisAlignment, Element, Flex, ParentElement, Radius, Text,
+};
+use crate::geometry::vector::vec2f;
+use crate::scene::DropShadow;
 use crate::ui_components::components::{UiComponent, UiComponentStyles};
 
 pub struct Tooltip {
     label: String,
     styles: UiComponentStyles,
 }
-
-const FORTY_PERCENT_OPACITY: u8 = (255. * 0.4) as u8;
 
 impl UiComponent for Tooltip {
     type ElementType = Container;
@@ -53,7 +55,12 @@ impl UiComponent for Tooltip {
             container = container.with_background(background);
         }
 
-        container
+        container.with_drop_shadow(DropShadow {
+            color: ColorU::new(0, 0, 0, 40),
+            offset: vec2f(0., 3.),
+            blur_radius: 12.,
+            spread_radius: 0.,
+        })
     }
 
     fn with_style(self, styles: UiComponentStyles) -> Self {
@@ -73,6 +80,7 @@ impl Tooltip {
 pub struct TooltipWithSublabel {
     label: String,
     sublabel: String,
+    shortcut_badge: bool,
     styles: UiComponentStyles,
 }
 
@@ -90,30 +98,43 @@ impl UiComponent for TooltipWithSublabel {
             .with_color(styles.font_color.unwrap_or_default())
             .finish(),
         )
-        .with_margin_right(4.)
+        .with_margin_right(if self.shortcut_badge { 8. } else { 4. })
         .finish();
 
-        let label_font_color = styles.font_color.unwrap_or_default();
-        let sublabel_font_color = ColorU::new(
-            label_font_color.r,
-            label_font_color.g,
-            label_font_color.b,
-            FORTY_PERCENT_OPACITY,
-        );
+        let label_color = styles.font_color.unwrap_or_default();
+        let sublabel_color = if self.shortcut_badge {
+            label_color
+        } else {
+            ColorU::new(label_color.r, label_color.g, label_color.b, 102)
+        };
         let sublabel_text = Container::new(
             Text::new_inline(
-                self.sublabel,
+                if self.shortcut_badge {
+                    self.sublabel.replace(' ', "+")
+                } else {
+                    self.sublabel
+                },
                 styles.font_family_id.unwrap(),
                 styles.font_size.unwrap_or_default(),
             )
-            .with_color(sublabel_font_color)
+            .with_color(sublabel_color)
+            .with_line_height_ratio(1.)
             .finish(),
-        )
-        .with_margin_left(4.)
+        );
+        let sublabel_text = if self.shortcut_badge {
+            sublabel_text
+                .with_horizontal_padding(5.)
+                .with_vertical_padding(3.)
+                .with_background(ColorU::new(80, 81, 82, 255))
+                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(5.)))
+        } else {
+            sublabel_text.with_margin_left(4.)
+        }
         .finish();
 
         let mut container = Container::new(
             Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_children([label_text, sublabel_text])
                 .finish(),
         );
@@ -135,6 +156,10 @@ impl UiComponent for TooltipWithSublabel {
                 .with_padding_bottom(padding.bottom);
         }
 
+        if self.shortcut_badge {
+            container = container.with_padding_right(6.);
+        }
+
         if let Some(margin) = styles.margin {
             container = container
                 .with_margin_left(margin.left)
@@ -147,7 +172,12 @@ impl UiComponent for TooltipWithSublabel {
             container = container.with_background(background);
         }
 
-        container
+        container.with_drop_shadow(DropShadow {
+            color: ColorU::new(0, 0, 0, 40),
+            offset: vec2f(0., 3.),
+            blur_radius: 12.,
+            spread_radius: 0.,
+        })
     }
 
     fn with_style(self, styles: UiComponentStyles) -> Self {
@@ -159,10 +189,16 @@ impl UiComponent for TooltipWithSublabel {
 }
 
 impl TooltipWithSublabel {
+    pub fn with_shortcut_badge(mut self, shortcut_badge: bool) -> Self {
+        self.shortcut_badge = shortcut_badge;
+        self
+    }
+
     pub fn new(label: String, sublabel: String, styles: UiComponentStyles) -> Self {
         TooltipWithSublabel {
             label,
             sublabel,
+            shortcut_badge: false,
             styles,
         }
     }

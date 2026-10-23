@@ -7,6 +7,7 @@ use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use serde::Serialize;
 use warp_core::features::FeatureFlag;
+use warp_core::ui::design::{SURFACE_RADIUS, popup_shadow, subtle_border};
 use warp_core::ui::theme::Fill;
 use warp_errors::report_error;
 use warpui::r#async::SpawnedFutureHandle;
@@ -1133,11 +1134,14 @@ impl View for ShareBlockModal {
                                 .with_child(footer)
                                 .finish(),
                         )
-                        .with_background(appearance.theme().surface_2())
+                        .with_background(appearance.theme().background().into_solid())
                         .with_uniform_padding(PADDING)
                         .with_uniform_margin(35.)
-                        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
-                        .with_border(Border::all(1.).with_border_fill(appearance.theme().outline()))
+                        .with_corner_radius(CornerRadius::with_all(SURFACE_RADIUS))
+                        .with_border(
+                            Border::all(1.).with_border_fill(subtle_border(appearance.theme())),
+                        )
+                        .with_drop_shadow(popup_shadow(appearance.theme()))
                         .finish(),
                     )
                     .with_width(MODAL_WIDTH)

@@ -2,12 +2,13 @@ use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
 use serde::Serialize;
 use settings::Setting as _;
+use warp_core::ui::design::{CONTROL_RADIUS, SURFACE_RADIUS, popup_shadow, subtle_border};
 use warp_core::ui::theme::Fill;
 use warp_errors::report_if_error;
 use warpui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
-    OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
+    OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
 use warpui::keymap::FixedBinding;
 use warpui::platform::Cursor;
@@ -38,7 +39,6 @@ const MODAL_WIDTH: f32 = 700.;
 const BORDER_WIDTH: f32 = 1.;
 const MODAL_TITLE_FONT_SIZE: f32 = 16.;
 const MODAL_UNIFORM_PADDING: f32 = 24.;
-const CORNER_RADIUS_PIXELS: f32 = 8.;
 const PRIMARY_BUTTON_HEIGHT: f32 = 40.;
 const SECTION_UNIFORM_PADDING: f32 = 24.;
 
@@ -571,7 +571,7 @@ impl EditorModal {
                 .with_padding_right(SECTION_UNIFORM_PADDING)
                 .with_padding_bottom(bottom_padding)
                 .with_padding_left(SECTION_UNIFORM_PADDING)
-                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(CORNER_RADIUS_PIXELS)))
+                .with_corner_radius(CornerRadius::with_all(CONTROL_RADIUS))
                 .with_background(background)
                 .finish()
         })
@@ -732,7 +732,7 @@ impl EditorModal {
                 .with_margin_top(16.)
                 .with_background(appearance.theme().surface_3())
                 .with_border(Border::all(1.).with_border_fill(appearance.theme().outline()))
-                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(CORNER_RADIUS_PIXELS)))
+                .with_corner_radius(CornerRadius::with_all(CONTROL_RADIUS))
                 .finish()
         } else {
             Empty::new().finish()
@@ -876,9 +876,10 @@ impl View for EditorModal {
             .with_max_width(MODAL_WIDTH)
             .finish(),
         )
-        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(CORNER_RADIUS_PIXELS)))
-        .with_border(Border::all(BORDER_WIDTH).with_border_fill(theme.outline()))
-        .with_background(appearance.theme().surface_1())
+        .with_corner_radius(CornerRadius::with_all(SURFACE_RADIUS))
+        .with_border(Border::all(BORDER_WIDTH).with_border_fill(subtle_border(theme)))
+        .with_background(theme.background().into_solid())
+        .with_drop_shadow(popup_shadow(theme))
         .with_uniform_padding(MODAL_UNIFORM_PADDING)
         .with_margin_top(35.)
         .finish();

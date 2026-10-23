@@ -265,7 +265,7 @@ pub fn trigger_to_keystroke(trigger: &Trigger) -> Option<Keystroke> {
 pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
     match custom.into() {
         CustomAction::FocusInput => Keystroke::parse(cmd_or_ctrl_shift("l")).ok(),
-        CustomAction::NewTab => Keystroke::parse(cmd_or_ctrl_shift("t")).ok(),
+        CustomAction::NewTerminalTab => Keystroke::parse(cmd_or_ctrl_shift("t")).ok(),
         CustomAction::Cut => Keystroke::parse("cmdorctrl-x").ok(),
         CustomAction::Copy => Keystroke::parse(cmd_or_ctrl_shift("c")).ok(),
         CustomAction::Paste => Keystroke::parse(cmd_or_ctrl_shift("v")).ok(),
@@ -433,7 +433,7 @@ pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
                 Keystroke::parse("alt-2").ok()
             }
         }
-        CustomAction::NewTerminalTab
+        CustomAction::NewTab
         | CustomAction::NewFile
         | CustomAction::ShowAboutWarp
         | CustomAction::SplitPaneLeft

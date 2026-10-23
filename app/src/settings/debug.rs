@@ -55,7 +55,7 @@ define_settings_group!(DebugSettings, settings: [
     },
     show_memory_stats: ShowMemoryStats {
         type: bool,
-        default: true,
+        default: !cfg!(target_os = "linux"),
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Never,
         surface: settings::SettingSurfaces::GUI,

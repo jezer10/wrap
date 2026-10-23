@@ -1,4 +1,5 @@
 use pathfinder_geometry::vector::vec2f;
+use warp_core::ui::design::{SURFACE_RADIUS, popup_shadow, subtle_border};
 use warpui::color::ColorU;
 use warpui::elements::{
     Align, Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
@@ -17,7 +18,7 @@ use crate::appearance::Appearance;
 use crate::themes::theme::Fill;
 use crate::ui_components::{blended_colors, icons};
 
-pub const MODAL_CORNER_RADIUS: Radius = Radius::Pixels(8.);
+pub const MODAL_CORNER_RADIUS: Radius = SURFACE_RADIUS;
 pub const MODAL_WIDTH: f32 = 440.;
 pub const MODAL_HEADER_HEIGHT: f32 = 70.;
 pub const MODAL_PADDING: f32 = 28.;
@@ -132,7 +133,7 @@ impl<T: View> Modal<T> {
             modal_styles: UiComponentStyles {
                 border_radius: Some(CornerRadius::with_all(MODAL_CORNER_RADIUS)),
                 border_width: Some(1.),
-                border_color: Some(theme.outline().into()),
+                border_color: Some(subtle_border(theme).into()),
                 width: Some(MODAL_WIDTH),
                 height: Some(480.),
                 ..Default::default()
@@ -152,7 +153,7 @@ impl<T: View> Modal<T> {
                 ..Default::default()
             },
             body_styles: UiComponentStyles {
-                background: Some(theme.surface_2().into()),
+                background: Some(theme.background().into_solid().into()),
                 padding: Some(Coords {
                     top: MODAL_PADDING,
                     bottom: MODAL_PADDING,
@@ -241,7 +242,7 @@ impl<T: View> Modal<T> {
         let theme = appearance.theme();
         // Update theme dependent styles
         self.modal_styles = self.modal_styles.merge(UiComponentStyles {
-            border_color: Some(theme.outline().into()),
+            border_color: Some(subtle_border(theme).into()),
             ..Default::default()
         });
         self.header_styles = self.header_styles.merge(UiComponentStyles {
@@ -250,7 +251,7 @@ impl<T: View> Modal<T> {
             ..Default::default()
         });
         self.body_styles = self.body_styles.merge(UiComponentStyles {
-            background: Some(theme.surface_2().into()),
+            background: Some(theme.background().into_solid().into()),
             ..Default::default()
         });
     }
@@ -491,8 +492,9 @@ impl<T: View> View for Modal<T> {
 
         let modal = ConstrainedBox::new(
             Container::new(contents)
-                .with_background(blended_colors::neutral_2(appearance.theme()))
+                .with_background(appearance.theme().background().into_solid())
                 .with_corner_radius(self.modal_styles.border_radius.unwrap_or_default())
+                .with_drop_shadow(popup_shadow(appearance.theme()))
                 .with_border(
                     Border::all(self.modal_styles.border_width.unwrap())
                         .with_border_fill(self.modal_styles.border_color.unwrap()),

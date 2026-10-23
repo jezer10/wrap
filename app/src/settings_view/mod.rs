@@ -33,6 +33,7 @@ use warp_core::context_flag::ContextFlag;
 use warp_core::features::FeatureFlag;
 use warp_core::send_telemetry_from_ctx;
 use warp_core::settings::ToggleableSetting as _;
+use warp_core::ui::design::{CONTROL_RADIUS, control_border, subtle_border};
 use warp_core::ui::theme::color::internal_colors;
 use warp_editor::editor::NavigationKey;
 use warpify_page::{WarpifyPageAction, WarpifyPageView};
@@ -2399,6 +2400,9 @@ impl SettingsView {
                     )
                     .finish(),
             )
+            .with_background(appearance.theme().surface_1())
+            .with_corner_radius(CornerRadius::with_all(CONTROL_RADIUS))
+            .with_border(Border::all(1.).with_border_fill(control_border(appearance.theme())))
             .with_margin_left(16.)
             .with_margin_right(16.)
             .with_margin_bottom(8.)
@@ -2626,7 +2630,8 @@ impl View for SettingsView {
                     .with_child(footer)
                     .finish(),
             )
-            .with_border(Border::right(SECTION_BORDER_WIDTH).with_border_fill(theme.outline()))
+            .with_background(theme.background().with_opacity(94))
+            .with_border(Border::right(SECTION_BORDER_WIDTH).with_border_fill(subtle_border(theme)))
             .finish(),
         )
         .with_width(sidebar_width())

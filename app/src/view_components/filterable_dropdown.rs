@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
+use warp_core::ui::design;
 use warp_editor::editor::NavigationKey;
 use warpui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, DispatchEventResult, Element, EventHandler, Flex,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
-    PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Shrinkable,
-    Stack,
+    PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition, Shrinkable, Stack,
 };
 use warpui::geometry::vector::vec2f;
 use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
@@ -90,7 +90,7 @@ where
 {
     pub fn new(ctx: &mut ViewContext<Self>) -> Self {
         let theme = Appearance::as_ref(ctx).theme();
-        let border = Border::all(1.).with_border_fill(theme.outline());
+        let border = Border::all(1.).with_border_fill(design::subtle_border(theme));
         let dropdown = ctx.add_typed_action_view(|_ctx| {
             Menu::new()
                 .with_menu_variant(MenuVariant::scrollable())
@@ -582,9 +582,9 @@ where
             .with_padding_left(h_padding.0)
             .with_padding_right(h_padding.1)
             .with_border(
-                Border::all(1.).with_border_fill(appearance.theme().foreground().with_opacity(20)),
+                Border::all(1.).with_border_fill(design::control_border(appearance.theme())),
             )
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+            .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
             .finish()
     }
 
@@ -609,7 +609,7 @@ where
     }
 
     fn render_empty_menu(&self, appearance: &Appearance) -> Box<dyn Element> {
-        let background_fill = appearance.theme().surface_2();
+        let background_fill = appearance.theme().background().into_solid().into();
         let empty_text = appearance
             .ui_builder()
             .span("No matches found.")
@@ -623,10 +623,9 @@ where
             Container::new(Align::new(empty_text).finish())
                 .with_background(background_fill)
                 .with_border(
-                    Border::all(1.)
-                        .with_border_fill(appearance.theme().foreground().with_opacity(20)),
+                    Border::all(1.).with_border_fill(design::subtle_border(appearance.theme())),
                 )
-                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+                .with_corner_radius(CornerRadius::with_all(design::SURFACE_RADIUS))
                 .finish(),
         )
         .with_max_width(self.menu_width.unwrap_or(self.top_bar_max_width))

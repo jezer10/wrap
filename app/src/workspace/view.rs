@@ -15,6 +15,7 @@ pub(crate) mod left_panel;
 pub(crate) mod onboarding;
 pub(crate) mod openwarp_launch_modal;
 pub(crate) mod orchestration_launch_modal;
+mod project_console;
 pub(crate) mod right_panel;
 mod startup_directory;
 mod tab_grouping;
@@ -1091,6 +1092,7 @@ pub struct Workspace {
     palette: ViewHandle<CommandPalette>,
     ctrl_tab_palette: ViewHandle<CommandPalette>,
     mouse_states: WorkspaceMouseStates,
+    project_console: project_console::ProjectConsoleState,
     settings_pane: ViewHandle<SettingsView>,
     import_modal: ViewHandle<ImportModal>,
     theme_chooser_view: ViewHandle<ThemeChooser>,
@@ -2939,6 +2941,11 @@ impl Workspace {
             Self::handle_network_status_event,
         );
 
+        ctx.subscribe_to_model(&ProjectManagementModel::handle(ctx), |_, _, _, ctx| {
+            ctx.notify()
+        });
+        ctx.observe(&ActiveSession::handle(ctx), |_, _, ctx| ctx.notify());
+
         let palette =
             ctx.add_typed_action_view(|ctx| CommandPalette::new(NavigationMode::Normal, ctx));
         ctx.subscribe_to_view(&palette, |me, _, event, ctx| {
@@ -3481,6 +3488,7 @@ impl Workspace {
             palette,
             ctrl_tab_palette,
             mouse_states: Default::default(),
+            project_console: Default::default(),
             previous_theme: None,
             background_image_animation_start_time: Instant::now(),
             settings_pane,
@@ -5603,6 +5611,9 @@ impl Workspace {
         };
 
         self.active_tab_index = index;
+        if cfg!(target_os = "linux") {
+            self.project_console.reveal_active_tab();
+        }
 
         // The range selection's anchor is the active tab, so any change to
         // the active tab makes the existing selection stale; clear it.
@@ -13464,9 +13475,42 @@ impl Workspace {
 
     fn handle_open_repository(&mut self, path: &str, ctx: &mut ViewContext<Self>) {
         let path_buf = PathBuf::from(path);
+        if !path_buf.is_dir() {
+            let window_id = ctx.window_id();
+            ToastStack::handle(ctx).update(ctx, |toasts, ctx| {
+                toasts.add_ephemeral_toast(
+                    DismissibleToast::error(format!("La carpeta no está disponible: {path}")),
+                    window_id,
+                    ctx,
+                );
+            });
+            return;
+        }
         ProjectManagementModel::handle(ctx).update(ctx, |projects, ctx| {
             projects.upsert_project(path_buf.clone(), ctx);
         });
+        let project_roots = ProjectManagementModel::as_ref(ctx)
+            .all_projects()
+            .map(|project| PathBuf::from(&project.path))
+            .collect::<Vec<_>>();
+        let existing_tab = std::iter::once(self.active_tab_index)
+            .chain(0..self.tabs.len())
+            .find(|index| {
+                self.tabs[*index]
+                    .pane_group
+                    .as_ref(ctx)
+                    .active_session_path(ctx)
+                    .is_some_and(|directory| {
+                        project_console::project_for_directory(
+                            &directory,
+                            project_roots.iter().map(PathBuf::as_path),
+                        ) == Some(path_buf.as_path())
+                    })
+            });
+        if let Some(index) = existing_tab {
+            self.activate_tab(index, ctx);
+            return;
+        }
         self.add_tab_with_pane_layout(
             PanesLayout::SingleTerminal(Box::new(NewTerminalOptions {
                 initial_directory: Some(path_buf.clone()),
@@ -13477,13 +13521,15 @@ impl Workspace {
             None,
             ctx,
         );
-        self.active_tab_pane_group().update(ctx, |tab, ctx| {
-            if let Some(active_terminal) = tab.active_session_view(ctx) {
-                active_terminal.update(ctx, |terminal, _| {
-                    terminal.maybe_set_pending_repo_init_path(path_buf);
-                });
-            }
-        });
+        if !cfg!(target_os = "linux") {
+            self.active_tab_pane_group().update(ctx, |tab, ctx| {
+                if let Some(active_terminal) = tab.active_session_view(ctx) {
+                    active_terminal.update(ctx, |terminal, _| {
+                        terminal.maybe_set_pending_repo_init_path(path_buf);
+                    });
+                }
+            });
+        }
     }
 
     /// Navigate to an existing AI conversation, focusing on its terminal view, if it's open anywhere.
@@ -25827,6 +25873,15 @@ impl TypedActionView for Workspace {
             } => {
                 self.add_tab_for_code_file(full_path.clone(), *line_and_column, ctx);
             }
+            HoverProject { path, hovered } => {
+                self.hover_project(path, *hovered, ctx);
+            }
+            ToggleProjectDetails { path } => {
+                self.toggle_project_details(path, ctx);
+            }
+            EditProject { path } => self.edit_project(path, ctx),
+            SaveProjectAlias => self.save_project_alias(ctx),
+            CloseProjectDetails => self.close_project_details(ctx),
             OpenRepository { path } => {
                 self.open_repository(path.as_deref(), ctx);
             }
@@ -26952,7 +27007,9 @@ impl View for Workspace {
             }
         }
 
-        let panels = if use_simplified_wasm_tab_bar {
+        let panels = if cfg!(target_os = "linux") {
+            self.render_project_console(app)
+        } else if use_simplified_wasm_tab_bar {
             // For the simplified WASM tab bar, we want to render the tab bar on top of all other content
             // so that content being added/moved around in the workspace (for example the details panel being toggled)
             // does not affect the tab.
@@ -28041,31 +28098,35 @@ impl View for Workspace {
             .background_opacity
             .effective_opacity(self.window_id, app);
 
-        match theme.background_image() {
-            Some(img) => {
-                let opacity_ratio = background_opacity as f32 / 100.;
-                stack.add_child(
-                    Shrinkable::new(
-                        1.,
-                        Image::new(img.source(), CacheOption::Original)
-                            .cover()
-                            .with_opacity(opacity_ratio)
-                            .with_corner_radius(window_corner_radius)
-                            .enable_animation_with_start_time(
-                                self.background_image_animation_start_time,
-                            )
-                            .finish(),
-                    )
-                    .finish(),
-                );
-                stack.add_child(workspace.finish());
-            }
-            _ => {
-                stack.add_child(
-                    workspace
-                        .with_background(theme.surface_2().with_opacity(background_opacity))
+        if cfg!(target_os = "linux") {
+            stack.add_child(workspace.finish());
+        } else {
+            match theme.background_image() {
+                Some(img) => {
+                    let opacity_ratio = background_opacity as f32 / 100.;
+                    stack.add_child(
+                        Shrinkable::new(
+                            1.,
+                            Image::new(img.source(), CacheOption::Original)
+                                .cover()
+                                .with_opacity(opacity_ratio)
+                                .with_corner_radius(window_corner_radius)
+                                .enable_animation_with_start_time(
+                                    self.background_image_animation_start_time,
+                                )
+                                .finish(),
+                        )
                         .finish(),
-                );
+                    );
+                    stack.add_child(workspace.finish());
+                }
+                _ => {
+                    stack.add_child(
+                        workspace
+                            .with_background(theme.surface_2().with_opacity(background_opacity))
+                            .finish(),
+                    );
+                }
             }
         }
 

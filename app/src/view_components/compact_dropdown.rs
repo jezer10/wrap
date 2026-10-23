@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
 use pathfinder_geometry::vector::vec2f;
+use warp_core::ui::design;
 use warpui::elements::{
     Border, ChildAnchor, ConstrainedBox, CornerRadius, CrossAxisAlignment, Flex,
     Icon as WarpUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
-    PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack,
+    PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition, Stack,
 };
 use warpui::presenter::ChildView;
 use warpui::ui_components::button::ButtonVariant;
@@ -60,7 +61,7 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
             let theme = Appearance::as_ref(ctx).theme();
             Menu::new()
                 .with_menu_variant(menu_variant)
-                .with_border(Border::all(1.).with_border_fill(theme.outline()))
+                .with_border(Border::all(1.).with_border_fill(design::subtle_border(theme)))
                 .prevent_interaction_with_other_elements()
         });
 
@@ -150,11 +151,11 @@ impl<A: DropdownItemAction> CompactDropdown<A> {
             .set_clicked_styles(None)
             .with_style(UiComponentStyles {
                 padding: Some(Coords::uniform(4.)),
-                border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+                border_radius: Some(CornerRadius::with_all(design::CONTROL_RADIUS)),
                 ..Default::default()
             })
             .with_hovered_styles(UiComponentStyles {
-                background: Some(appearance.theme().surface_3().into()),
+                background: Some(design::hover_background(appearance.theme()).into()),
                 ..Default::default()
             })
             .build();

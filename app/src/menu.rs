@@ -7,16 +7,18 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::color::blend::Blend;
+use warp_core::ui::design::{
+    CONTROL_RADIUS, SURFACE_RADIUS, hover_background, popup_shadow, selected_background,
+};
 use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
 use warpui::assets::asset_cache::AssetSource;
 use warpui::elements::{
     Align, Border, CacheOption, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, DispatchEventResult,
-    DropShadow, Element, EventHandler, Expanded, Flex, Hoverable, Icon, Image, MainAxisAlignment,
-    MainAxisSize, MouseInBehavior, MouseStateHandle, OffsetPositioning, ParentAnchor,
-    ParentElement, ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds,
-    Radius, Rect, SavePosition, ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable,
-    Stack, Text,
+    Element, EventHandler, Expanded, Flex, Hoverable, Icon, Image, MainAxisAlignment, MainAxisSize,
+    MouseInBehavior, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
+    ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds, Rect, SavePosition,
+    ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Shrinkable, Stack, Text,
 };
 use warpui::fonts::{FamilyId, Properties};
 use warpui::keymap::FixedBinding;
@@ -44,12 +46,6 @@ pub const SEPARATOR_VERTICAL_MARGIN: f32 = 4.;
 const MINIMUM_MENU_ITEM_FONT_SIZE: f32 = 5.;
 const PADDING_TO_ICON_SIZE_MULTIPLIER: f32 = 3.;
 const MENU_ITEM_LEFT_PADDING_MULTIPLIER: f32 = 1.5;
-const DROP_SHADOW_COLOR: ColorU = ColorU {
-    r: 0,
-    g: 0,
-    b: 0,
-    a: 48,
-};
 const SECONDARY_TEXT_RATIO: f32 = 0.9;
 
 #[derive(Clone, Debug)]
@@ -460,10 +456,8 @@ pub struct MenuItemFields<A: Action + Clone> {
     tooltip_position: MenuTooltipPosition,
     right_side_label: Option<RightSideLabel>,
     right_side_icon: Option<RightSideIconConfig<A>>,
-    /// Optional override for the background color
-    /// hovered or selected. When `None`, the default hover/selected background
-    /// from the theme is used (accent or dark overlay, depending on
-    /// `highlight_on_hover`).
+    /// Optional background override when hovered or selected. Otherwise uses the shared hover or
+    /// selection background, depending on `highlight_on_hover`.
     override_hover_background_color: Option<Fill>,
     /// Optional override for the leading icon size in logical pixels. When
     /// `None`, the icon is sized to `appearance.ui_font_size()`.
@@ -1195,9 +1189,9 @@ impl<A: Action + Clone> MenuItemFields<A> {
             let is_hovered = state.is_hovered() && !safe_zone_suppresses_hover;
             let is_hovered_or_selected = is_hovered || is_selected;
             let default_hover_background = if self.highlight_on_hover {
-                theme.accent_button_color()
+                selected_background(theme)
             } else {
-                theme.dark_overlay()
+                hover_background(theme)
             };
             let hover_background = self
                 .override_hover_background_color
@@ -1206,12 +1200,9 @@ impl<A: Action + Clone> MenuItemFields<A> {
                 if is_hovered_or_selected && !self.disabled && !self.no_interaction_on_hover {
                     Some(hover_background)
                 } else if submenu_being_shown_for_item {
-                    // Preserve prior behavior: the submenu-open state always uses the
-                    // accent color (or the explicit override), regardless of
-                    // `highlight_on_hover`.
                     Some(
                         self.override_hover_background_color
-                            .unwrap_or_else(|| theme.accent_button_color()),
+                            .unwrap_or_else(|| selected_background(theme)),
                     )
                 } else {
                     None
@@ -1344,7 +1335,8 @@ impl<A: Action + Clone> MenuItemFields<A> {
             .with_padding_top(vertical_padding)
             .with_padding_bottom(vertical_padding)
             .with_padding_left(left_padding)
-            .with_padding_right(horizontal_padding);
+            .with_padding_right(horizontal_padding)
+            .with_corner_radius(CornerRadius::with_all(CONTROL_RADIUS));
 
             let container_element = if let Some(background_color) = background_color {
                 container.with_background(background_color).finish()
@@ -2749,7 +2741,7 @@ impl<A: Action + Clone> SubMenu<A> {
         let selected_row_index = self.selected_row_index;
         let selected_item_index = self.selected_item_index;
 
-        let background_color = appearance.theme().surface_2();
+        let background_color = appearance.theme().background().into_solid().into();
         let submenus = self.render_submenus(
             submenu_width,
             background_color,
@@ -2776,9 +2768,9 @@ impl<A: Action + Clone> SubMenu<A> {
             .enumerate()
             .for_each(|(depth, submenu)| {
                 let corner_radius = if flatten_bottom_corners && depth == 0 {
-                    CornerRadius::with_top(Radius::Pixels(5.))
+                    CornerRadius::with_top(SURFACE_RADIUS)
                 } else {
-                    CornerRadius::with_all(Radius::Pixels(5.))
+                    CornerRadius::with_all(SURFACE_RADIUS)
                 };
 
                 // At depth 0, place pinned header/footer inside the styled container
@@ -2839,9 +2831,7 @@ impl<A: Action + Clone> SubMenu<A> {
                 );
 
                 if with_drop_shadow {
-                    menu = menu.with_drop_shadow(DropShadow::new_with_standard_offset_and_spread(
-                        DROP_SHADOW_COLOR,
-                    ));
+                    menu = menu.with_drop_shadow(popup_shadow(appearance.theme()));
                 }
 
                 if depth == 0 {

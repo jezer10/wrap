@@ -19,5 +19,3 @@ pub mod tab_selector;
 pub(crate) mod window_focus_dimming;
 
 pub use warp_core::ui::icons;
-
-const BORDER_RADIUS: f32 = 4.;

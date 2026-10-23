@@ -5,7 +5,7 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use uuid::Uuid;
 use warp_core::ui::builder::UiBuilder;
-use warp_core::ui::theme::color::internal_colors;
+use warp_core::ui::design;
 use warpui::accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole};
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::elements::{
@@ -28,7 +28,6 @@ use crate::appearance::Appearance;
 use crate::themes::theme::Fill;
 
 const TOAST_WIDTH: f32 = 464.;
-const TOAST_CORNER_RADIUS: f32 = 4.;
 const TEXT_MARGIN: f32 = 16.;
 const VERTICAL_PADDING: f32 = 8.;
 const HORIZONTAL_PADDING: f32 = 12.;
@@ -606,9 +605,7 @@ impl<A: Action + Clone> DismissibleToast<A> {
                 .with_vertical_padding(VERTICAL_PADDING)
                 .with_horizontal_padding(HORIZONTAL_PADDING)
                 .with_background(self.flavor.bg_color(appearance))
-                .with_corner_radius(warpui::elements::CornerRadius::with_all(Radius::Pixels(
-                    TOAST_CORNER_RADIUS,
-                )))
+                .with_corner_radius(CornerRadius::with_all(design::SURFACE_RADIUS))
                 .with_border(Border::all(1.).with_border_fill(self.flavor.border_color(appearance)))
                 .finish();
 
@@ -711,7 +708,7 @@ impl ToastFlavor {
     fn text_color(&self, appearance: &Appearance) -> ColorU {
         let theme = appearance.theme();
         match self {
-            ToastFlavor::Default => theme.main_text_color(theme.background()).into(),
+            ToastFlavor::Default => theme.main_text_color(theme.surface_2()).into(),
             _ => theme.background().into(),
         }
     }
@@ -719,7 +716,7 @@ impl ToastFlavor {
     fn bg_color(&self, appearance: &Appearance) -> Fill {
         let theme = appearance.theme();
         match self {
-            Self::Default => internal_colors::neutral_4(theme).into(),
+            Self::Default => theme.surface_2(),
             Self::Success => theme.ansi_fg_green().into(),
             Self::Error => theme.ansi_fg_red().into(),
         }
@@ -728,7 +725,7 @@ impl ToastFlavor {
     fn border_color(&self, appearance: &Appearance) -> Fill {
         let theme = appearance.theme();
         match self {
-            ToastFlavor::Default => internal_colors::neutral_3(theme).into(),
+            ToastFlavor::Default => design::subtle_border(theme),
             ToastFlavor::Success => theme.ansi_bg_green().into(),
             ToastFlavor::Error => theme.ansi_bg_red().into(),
         }

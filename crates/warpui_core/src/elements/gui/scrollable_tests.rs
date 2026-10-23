@@ -81,6 +81,8 @@ struct BasicScrollableView {
     clipped_scroll_state: ClippedScrollStateHandle,
     scroll_area_size: f32,
     num_elements: usize,
+    cross_axis_scroll: bool,
+    child_handles_scroll: bool,
 }
 
 pub fn init(app: &mut AppContext) {
@@ -96,6 +98,8 @@ impl BasicScrollableView {
             axis,
             scroll_area_size,
             num_elements,
+            cross_axis_scroll: false,
+            child_handles_scroll: false,
             clipped_scroll_state: Default::default(),
             mouse_downs: Default::default(),
         }
@@ -118,19 +122,22 @@ impl crate::core::View for BasicScrollableView {
         let mut flex = Flex::new(self.axis);
         for i in 0..self.num_elements {
             let id = i + 1;
-            flex.add_child(
-                EventHandler::new(
-                    ConstrainedBox::new(Rect::new().finish())
-                        .with_height(50.)
-                        .with_width(50.)
-                        .finish(),
-                )
-                .on_left_mouse_down(move |evt_ctx, _ctx, _position| {
-                    evt_ctx.dispatch_action("test_view:mouse_down", id);
-                    DispatchEventResult::StopPropagation
-                })
-                .finish(),
-            );
+            let child = EventHandler::new(
+                ConstrainedBox::new(Rect::new().finish())
+                    .with_height(50.)
+                    .with_width(50.)
+                    .finish(),
+            )
+            .on_left_mouse_down(move |evt_ctx, _ctx, _position| {
+                evt_ctx.dispatch_action("test_view:mouse_down", id);
+                DispatchEventResult::StopPropagation
+            });
+            let child = if self.child_handles_scroll {
+                child.on_scroll_wheel(|_, _, _, _| DispatchEventResult::StopPropagation)
+            } else {
+                child
+            };
+            flex.add_child(child.finish());
         }
 
         if matches!(self.axis, Axis::Vertical) {
@@ -150,21 +157,24 @@ impl crate::core::View for BasicScrollableView {
             .with_height(self.scroll_area_size)
             .finish()
         } else {
-            ConstrainedBox::new(
-                ClippedScrollable::horizontal(
-                    self.clipped_scroll_state.clone(),
-                    ConstrainedBox::new(flex.finish())
-                        .with_width(self.num_elements as f32 * 50.)
-                        .finish(),
-                    ScrollbarWidth::Auto,
-                    Fill::None,
-                    Fill::None,
-                    Fill::None,
-                )
-                .finish(),
-            )
-            .with_width(self.scroll_area_size)
-            .finish()
+            let scrollable = ClippedScrollable::horizontal(
+                self.clipped_scroll_state.clone(),
+                ConstrainedBox::new(flex.finish())
+                    .with_width(self.num_elements as f32 * 50.)
+                    .finish(),
+                ScrollbarWidth::Auto,
+                Fill::None,
+                Fill::None,
+                Fill::None,
+            );
+            let scrollable = if self.cross_axis_scroll {
+                scrollable.with_cross_axis_scroll()
+            } else {
+                scrollable
+            };
+            ConstrainedBox::new(scrollable.finish())
+                .with_width(self.scroll_area_size)
+                .finish()
         }
     }
 
@@ -657,3 +667,122 @@ define_axis_agnostic_tests!(test_clipped_scrolling_no_scrollbars);
 define_axis_agnostic_tests!(test_stacked_view_scroll_handling);
 define_axis_agnostic_tests!(test_clicks_in_scrollbar_gutter_change_scroll_position);
 define_axis_agnostic_tests!(test_ignores_clicks_outside_scrollbar_bounds);
+
+#[test]
+fn horizontal_strip_accepts_vertical_wheel_only_when_enabled() {
+    for enabled in [false, true] {
+        for precise in [false, true] {
+            App::test((), |mut app| async move {
+                let (window_id, view) = app.add_window(WindowStyle::NotStealFocus, |_| {
+                    let mut view = BasicScrollableView::new(Axis::Horizontal, 200., 10);
+                    view.cross_axis_scroll = enabled;
+                    view
+                });
+                let presenter = Rc::new(RefCell::new(Presenter::new(window_id)));
+                let mut updated = EntityIdSet::default();
+                updated.insert(app.root_view_id(window_id).unwrap());
+                app.update(|ctx| {
+                    presenter.borrow_mut().invalidate(
+                        WindowInvalidation {
+                            updated,
+                            ..Default::default()
+                        },
+                        ctx,
+                    );
+                    let _ = presenter
+                        .borrow_mut()
+                        .build_scene(vec2f(1000., 1000.), 1., None, ctx);
+                    ctx.simulate_window_event(
+                        Event::ScrollWheel {
+                            position: vec2f(15., 15.),
+                            delta: vec2f(0., -1.),
+                            precise,
+                            modifiers: Default::default(),
+                        },
+                        window_id,
+                        presenter.clone(),
+                    );
+                });
+                view.read(&app, |view, _ctx| {
+                    assert_eq!(
+                        view.clipped_scroll_state.scroll_start() > Pixels::zero(),
+                        enabled
+                    );
+                });
+            });
+        }
+    }
+}
+
+fn scroll_view(
+    app: &mut App,
+    view: BasicScrollableView,
+    delta: Vector2F,
+    precise: bool,
+) -> (Pixels, bool) {
+    let state = view.clipped_scroll_state.clone();
+    let presenter = create_presenter_and_render(app, |_| view, vec2f(1000., 1000.));
+    let handled = app.update(|ctx| {
+        presenter
+            .borrow_mut()
+            .dispatch_event(
+                Event::ScrollWheel {
+                    position: vec2f(15., 15.),
+                    delta,
+                    precise,
+                    modifiers: Default::default(),
+                },
+                ctx,
+            )
+            .handled
+    });
+    (state.scroll_start(), handled)
+}
+
+#[test]
+fn horizontal_strip_preserves_diagonal_touchpad_direction_and_precision() {
+    App::test((), |mut app| async move {
+        let mut view = BasicScrollableView::new(Axis::Horizontal, 200., 10);
+        view.cross_axis_scroll = true;
+        view.clipped_scroll_state.scroll_to(Pixels::new(100.));
+
+        let result = scroll_view(&mut app, view, vec2f(-0.25, 2.), true);
+
+        assert_eq!(result, (Pixels::new(100.25), true));
+    });
+}
+
+fn test_child_handles_wheel_without_scrolling_parent(axis: Axis) {
+    App::test((), |mut app| async move {
+        let mut view = BasicScrollableView::new(axis, 200., 10);
+        view.child_handles_scroll = true;
+
+        let result = scroll_view(&mut app, view, -25_f32.along(axis), true);
+
+        assert_eq!(result, (Pixels::zero(), true));
+    });
+}
+
+fn test_wheel_propagates_when_content_fits(axis: Axis) {
+    App::test((), |mut app| async move {
+        let view = BasicScrollableView::new(axis, 200., 4);
+
+        let result = scroll_view(&mut app, view, -25_f32.along(axis), true);
+
+        assert_eq!(result, (Pixels::zero(), false));
+    });
+}
+
+fn test_cross_axis_wheel_propagates_without_remapping(axis: Axis) {
+    App::test((), |mut app| async move {
+        let view = BasicScrollableView::new(axis, 200., 10);
+
+        let result = scroll_view(&mut app, view, -25_f32.along(axis.invert()), true);
+
+        assert_eq!(result, (Pixels::zero(), false));
+    });
+}
+
+define_axis_agnostic_tests!(test_child_handles_wheel_without_scrolling_parent);
+define_axis_agnostic_tests!(test_wheel_propagates_when_content_fits);
+define_axis_agnostic_tests!(test_cross_axis_wheel_propagates_without_remapping);

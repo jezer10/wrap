@@ -167,8 +167,8 @@ pub struct Tooltip {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TooltipAlignment {
     Left,
-    Center,
     #[default]
+    Center,
     Right,
 }
 

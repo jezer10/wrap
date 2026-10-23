@@ -8279,6 +8279,14 @@ impl TerminalView {
     }
 
     pub fn active_session_path_if_local<C: ModelAsRef>(&self, ctx: &C) -> Option<PathBuf> {
+        self.reported_session_path_if_local(ctx)
+            // Checking if the pwd from the active session actually exists
+            // and if not (ie. directory was removed) - return None.
+            .filter(|path| path.is_dir())
+    }
+
+    /// Returns the active local session's reported working directory without accessing the filesystem.
+    pub(crate) fn reported_session_path_if_local<C: ModelAsRef>(&self, ctx: &C) -> Option<PathBuf> {
         if self.active_session_is_local(ctx) == Some(true) {
             self.active_block_metadata
                 .as_ref()
@@ -8294,9 +8302,6 @@ impl TerminalView {
                                 .and_then(|data| data.maybe_convert_absolute_path(cwd))
                         })
                 })
-                // Checking if the pwd from the active session actually exists
-                // and if not (ie. directory was removed) - return None.
-                .filter(|path| path.is_dir())
         } else {
             None
         }
