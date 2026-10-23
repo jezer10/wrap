@@ -1,12 +1,13 @@
 //! A reusable warning callout component with optional action button.
 use markdown_parser::{FormattedText, FormattedTextInline, FormattedTextLine};
 use warp_core::ui::color::blend::Blend;
+use warp_core::ui::design;
 use warpui::EventContext;
 use warpui::color::ColorU;
 use warpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Expanded, Flex,
     FormattedTextElement, Hoverable, HyperlinkLens, MainAxisSize, MouseStateHandle, ParentElement,
-    Radius, Text,
+    Text,
 };
 use warpui::platform::Cursor;
 
@@ -191,7 +192,7 @@ pub fn render_warning_box(config: WarningBoxConfig, appearance: &Appearance) -> 
 
         Hoverable::new(mouse_state, move |state| {
             let bg = if state.is_mouse_over_element() {
-                theme.surface_2()
+                design::hover_background(theme)
             } else {
                 theme.surface_3()
             };
@@ -207,8 +208,8 @@ pub fn render_warning_box(config: WarningBoxConfig, appearance: &Appearance) -> 
             )
             .with_horizontal_padding(12.)
             .with_vertical_padding(8.)
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.)))
-            .with_border(Border::all(1.).with_border_fill(theme.outline()))
+            .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
+            .with_border(Border::all(1.).with_border_fill(design::control_border(theme)))
             .with_background(bg)
             .finish()
         })
@@ -242,8 +243,8 @@ pub fn render_warning_box(config: WarningBoxConfig, appearance: &Appearance) -> 
         Container::new(row.finish())
             .with_margin_top(config.margin_top)
             .with_uniform_padding(12.)
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.)))
-            .with_border(Border::all(1.).with_border_fill(theme.outline()))
+            .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
+            .with_border(Border::all(1.).with_border_fill(design::subtle_border(theme)))
             .with_background(background)
             .finish(),
     );

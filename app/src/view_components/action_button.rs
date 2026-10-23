@@ -6,13 +6,14 @@ use pathfinder_geometry::vector::{Vector2F, vec2f};
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::color::contrast::MinimumAllowedContrast;
 use warp_core::ui::color::{ContrastingColor, coloru_with_opacity};
+use warp_core::ui::design;
 use warp_core::ui::theme::color::internal_colors;
 use warp_core::ui::theme::{AnsiColorIdentifier, Fill};
 use warpui::elements::{
     Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     DEFAULT_UI_LINE_HEIGHT_RATIO, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseStateHandle, OffsetPositioning, Padding, ParentAnchor, ParentElement as _,
-    ParentOffsetBounds, Radius, Stack, Text,
+    ParentOffsetBounds, Stack, Text,
 };
 use warpui::fonts::{Properties, Weight};
 use warpui::keymap::Keystroke;
@@ -147,9 +148,8 @@ pub trait ActionButtonTheme {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TooltipAlignment {
     Left,
-    Center,
-    /// Right alignment is the default for historical reasons.
     #[default]
+    Center,
     Right,
 }
 
@@ -367,7 +367,7 @@ impl ActionButton {
         self
     }
 
-    /// Configure tooltip alignment. If not specified, defaults to Right for historical reasons.
+    /// Configure tooltip alignment. Defaults to centered above or below the button.
     pub fn with_tooltip_alignment(mut self, alignment: TooltipAlignment) -> Self {
         self.tooltip_alignment = alignment;
         self
@@ -552,7 +552,7 @@ impl ActionButton {
                         .finish(),
                     )
                     .with_padding(padding)
-                    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(3.)))
+                    .with_corner_radius(CornerRadius::with_all(design::COMPACT_RADIUS))
                     .with_background_color(
                         appearance.theme().terminal_colors().bright.magenta.into(),
                     )
@@ -568,14 +568,19 @@ impl ActionButton {
             return;
         };
 
-        let tooltip_sublabel = self
+        let shortcut = self
             .tooltip_keybinding
             .and_then(|name| KeystrokeSource::Binding(name).displayed(app))
+            .or_else(|| self.cached_keystroke.as_ref().map(Keystroke::displayed));
+        let is_shortcut = shortcut.is_some();
+        let tooltip_sublabel = shortcut
+            .map(|shortcut| shortcut.replace(' ', "+"))
             .or_else(|| self.tooltip_sublabel.clone());
         let tooltip_element = if let Some(tooltip_sublabel) = tooltip_sublabel {
             appearance
                 .ui_builder()
                 .tool_tip_with_sublabel(tooltip, tooltip_sublabel)
+                .with_shortcut_badge(is_shortcut)
                 .build()
         } else {
             appearance.ui_builder().tool_tip(tooltip).build()
@@ -857,9 +862,9 @@ impl View for ActionButton {
             }
 
             let corner_radius = match self.adjoined_side {
-                Some(AdjoinedSide::Left) => CornerRadius::with_right(Radius::Pixels(4.)),
-                Some(AdjoinedSide::Right) => CornerRadius::with_left(Radius::Pixels(4.)),
-                None => CornerRadius::with_all(Radius::Pixels(4.)),
+                Some(AdjoinedSide::Left) => CornerRadius::with_right(design::CONTROL_RADIUS),
+                Some(AdjoinedSide::Right) => CornerRadius::with_left(design::CONTROL_RADIUS),
+                None => CornerRadius::with_all(design::CONTROL_RADIUS),
             };
 
             let border = if let Some(adjoined_side_border) = theme.adjoined_side_border(appearance)
@@ -1108,7 +1113,7 @@ pub struct NakedTheme;
 impl ActionButtonTheme for NakedTheme {
     fn background(&self, hovered: bool, appearance: &Appearance) -> Option<Fill> {
         if hovered {
-            Some(internal_colors::fg_overlay_2(appearance.theme()))
+            Some(design::hover_background(appearance.theme()))
         } else {
             None
         }
@@ -1186,7 +1191,7 @@ pub struct SecondaryTheme;
 impl ActionButtonTheme for SecondaryTheme {
     fn background(&self, hovered: bool, appearance: &Appearance) -> Option<Fill> {
         if hovered {
-            Some(internal_colors::fg_overlay_2(appearance.theme()))
+            Some(design::hover_background(appearance.theme()))
         } else {
             None
         }
@@ -1202,7 +1207,7 @@ impl ActionButtonTheme for SecondaryTheme {
     }
 
     fn border(&self, appearance: &Appearance) -> Option<ColorU> {
-        Some(internal_colors::neutral_4(appearance.theme()))
+        Some(design::control_border(appearance.theme()).into_solid())
     }
 
     fn keyboard_shortcut_background(&self, appearance: &Appearance) -> Option<ColorU> {
@@ -1229,7 +1234,7 @@ impl ActionButtonTheme for DisabledSecondaryTheme {
     }
 
     fn border(&self, appearance: &Appearance) -> Option<ColorU> {
-        Some(internal_colors::neutral_4(appearance.theme()))
+        Some(design::control_border(appearance.theme()).into_solid())
     }
 
     fn keyboard_shortcut_background(&self, appearance: &Appearance) -> Option<ColorU> {

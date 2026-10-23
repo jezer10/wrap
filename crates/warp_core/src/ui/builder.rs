@@ -22,7 +22,7 @@ use warpui_core::ui_components::radio_buttons::{
     RadioButtonItem, RadioButtonLayout, RadioButtonStateHandle, RadioButtons,
 };
 use warpui_core::ui_components::slider::{Slider, SliderStateHandle};
-use warpui_core::ui_components::switch::{Switch, SwitchStateHandle, TRACK_COLOR};
+use warpui_core::ui_components::switch::{Switch, SwitchStateHandle};
 use warpui_core::ui_components::text::{Paragraph, Span, WrappableText};
 use warpui_core::ui_components::text_input::TextInput;
 use warpui_core::ui_components::toggle_menu::{
@@ -34,6 +34,7 @@ use warpui_core::{Element, View, ViewHandle};
 use super::color::ContrastingColor;
 use super::color::blend::Blend;
 use super::color::contrast::MinimumAllowedContrast;
+use super::design;
 use super::theme::color::internal_colors::{self, text_main};
 use super::theme::{Fill, WarpTheme};
 
@@ -93,7 +94,7 @@ impl UiBuilder {
                 right: 15.,
             }),
             border_width: Some(1.),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+            border_radius: Some(CornerRadius::with_all(design::CONTROL_RADIUS)),
             background: background.map(|background| background.into()),
             border_color: Some(border.into()),
             font_color: Some(font_color.into_solid()),
@@ -121,9 +122,9 @@ impl UiBuilder {
                 right: 10.,
             }),
             border_width: Some(1.),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+            border_radius: Some(CornerRadius::with_all(design::CONTROL_RADIUS)),
             background: Some(self.warp_theme.background().into()),
-            border_color: Some(self.warp_theme.foreground().with_opacity(20).into()),
+            border_color: Some(design::control_border(&self.warp_theme).into()),
             font_color: None,
             ..Default::default()
         }
@@ -141,19 +142,19 @@ impl UiBuilder {
 
     pub fn default_tool_tip_styles(&self) -> UiComponentStyles {
         UiComponentStyles {
-            background: Some(self.warp_theme().tooltip_background().into()),
-            font_color: Some(self.warp_theme.background().into_solid()),
+            background: Some(ColorU::new(35, 36, 37, 255).into()),
+            font_color: Some(ColorU::new(250, 250, 250, 255)),
             padding: Some(Coords {
-                top: 4.,
-                bottom: 4.,
-                left: 8.,
-                right: 8.,
+                top: 6.,
+                bottom: 6.,
+                left: 12.,
+                right: 12.,
             }),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
-            border_width: Some(1.),
+            border_radius: Some(CornerRadius::with_all(design::SURFACE_RADIUS)),
+            border_width: Some(0.),
             border_color: Some(self.warp_theme.outline().into()),
             font_family_id: Some(self.ui_font_family),
-            font_size: Some(10.),
+            font_size: Some(13.),
             ..Default::default()
         }
     }
@@ -168,7 +169,7 @@ impl UiBuilder {
                 left: 14.,
                 right: 14.,
             }),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+            border_radius: Some(CornerRadius::with_all(design::COMPACT_RADIUS)),
             border_width: Some(1.),
             border_color: Some(self.warp_theme.outline().into()),
             font_family_id: Some(self.ui_font_family),
@@ -202,7 +203,7 @@ impl UiBuilder {
             ButtonVariant::Secondary => {
                 return self.base_styles(
                     None,
-                    self.warp_theme.outline(),
+                    design::control_border(&self.warp_theme),
                     self.warp_theme
                         .main_text_color(self.warp_theme.background()),
                 );
@@ -266,7 +267,14 @@ impl UiBuilder {
                     )),
                 self.warp_theme.foreground().with_opacity(20),
             ),
-            ButtonVariant::Secondary => (self.warp_theme.surface_3(), self.warp_theme.outline()),
+            ButtonVariant::Secondary => {
+                return self.base_styles(
+                    Some(design::hover_background(&self.warp_theme)),
+                    design::control_border(&self.warp_theme),
+                    self.warp_theme
+                        .main_text_color(self.warp_theme.background()),
+                );
+            }
             ButtonVariant::Warn => (
                 Fill::warn().with_opacity(80),
                 self.warp_theme.foreground().with_opacity(20),
@@ -316,7 +324,14 @@ impl UiBuilder {
                     .blend(&Fill::black().with_opacity(*details.button_click_opacity())),
                 Fill::black().with_opacity(30),
             ),
-            ButtonVariant::Secondary => (self.warp_theme.surface_3(), self.warp_theme.outline()),
+            ButtonVariant::Secondary => {
+                return self.base_styles(
+                    Some(design::selected_background(&self.warp_theme)),
+                    design::control_border(&self.warp_theme),
+                    self.warp_theme
+                        .main_text_color(self.warp_theme.background()),
+                );
+            }
             ButtonVariant::Warn => (Fill::warn(), Fill::black().with_opacity(30)),
             ButtonVariant::Error => (Fill::error(), Fill::black().with_opacity(30)),
             ButtonVariant::Outlined => (
@@ -354,7 +369,7 @@ impl UiBuilder {
                     .hint_text_color(self.warp_theme.background())
                     .into_solid(),
             ),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+            border_radius: Some(CornerRadius::with_all(design::COMPACT_RADIUS)),
             background: Some(internal_colors::fg_overlay_1(self.warp_theme()).into()),
             height: Some(DEFAULT_KEYBOARD_SHORTCUT_HEIGHT),
             padding: Some(Coords::default().left(6.).right(6.)),
@@ -539,6 +554,7 @@ impl UiBuilder {
 
     pub fn tool_tip_with_sublabel(&self, label: String, sublabel: String) -> TooltipWithSublabel {
         TooltipWithSublabel::new(label, sublabel, self.default_tool_tip_styles())
+            .with_shortcut_badge(true)
     }
 
     pub fn autosuggestion_tool_tip(&self, label: String) -> Tooltip {
@@ -644,25 +660,27 @@ impl UiBuilder {
             ..Default::default()
         };
 
+        let styles = |checked, disabled| {
+            let track = design::switch_track(&self.warp_theme, checked, disabled);
+            switch_margin_styles.merge(UiComponentStyles {
+                background: Some(track.into()),
+                foreground: Some(self.warp_theme.font_color(track).into()),
+                ..self.base_styles(
+                    Some(track),
+                    self.warp_theme.outline(),
+                    self.warp_theme.main_text_color(self.warp_theme.surface_2()),
+                )
+            })
+        };
         Switch::new(
             mouse_state,
-            switch_margin_styles.merge(self.base_styles(
-                Some(Fill::Solid(*TRACK_COLOR)),
-                Fill::white(),
-                self.warp_theme.main_text_color(self.warp_theme.surface_2()),
-            )),
+            styles(false, false),
             None,
-            Some(switch_margin_styles.merge(self.base_styles(
-                Some(self.warp_theme.accent()),
-                Fill::white(),
-                self.warp_theme.main_text_color(self.warp_theme.surface_2()),
-            ))),
-            Some(switch_margin_styles.merge(self.base_styles(
-                Some(self.warp_theme.disabled_ui_text_color()),
-                Fill::white(),
-                self.warp_theme.main_text_color(self.warp_theme.surface_2()),
-            ))),
+            Some(styles(true, false)),
+            Some(styles(false, true)),
         )
+        .with_thumb_shadow(design::control_shadow(&self.warp_theme))
+        .with_thumb_hover_fill(self.warp_theme.foreground().with_opacity(10).into())
         .with_thumb_hover_border(10.)
     }
 
@@ -671,7 +689,7 @@ impl UiBuilder {
 
         let checked_checkbox_override_styles = UiComponentStyles {
             font_size: checkbox_size,
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(2.))),
+            border_radius: Some(CornerRadius::with_all(design::COMPACT_RADIUS)),
             ..Default::default()
         };
 
@@ -744,6 +762,7 @@ impl UiBuilder {
             font_family_id: Some(self.ui_font_family),
             background: Some(background.into()),
             font_color: Some(font_color.into_solid()),
+            border_radius: Some(CornerRadius::with_all(design::CONTROL_RADIUS)),
             ..Default::default()
         }
     }
@@ -772,11 +791,12 @@ impl UiBuilder {
             )
             .set_font_size(font_size),
             self.toggle_menu_styles(
-                selected_background.unwrap_or(self.warp_theme.surface_3()),
+                selected_background
+                    .unwrap_or_else(|| design::selected_background(&self.warp_theme)),
                 self.warp_theme.active_ui_text_color(),
             ),
             self.toggle_menu_styles(
-                hover_background.unwrap_or(self.warp_theme.surface_2()),
+                hover_background.unwrap_or_else(|| design::hover_background(&self.warp_theme)),
                 self.warp_theme.active_ui_text_color(),
             ),
             on_toggle_change,
@@ -865,7 +885,7 @@ impl UiBuilder {
         let border_radius = if options.circular {
             Some(CornerRadius::with_all(Radius::Percentage(50.)))
         } else {
-            Some(CornerRadius::with_all(Radius::Percentage(20.)))
+            Some(CornerRadius::with_all(design::CONTROL_RADIUS))
         };
 
         let base_styles = UiComponentStyles {
@@ -1128,7 +1148,7 @@ impl UiBuilder {
         mouse_state: MouseStateHandle,
     ) -> Button {
         let default_styles = UiComponentStyles {
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
+            border_radius: Some(CornerRadius::with_all(design::COMPACT_RADIUS)),
             border_color: Some(self.warp_theme.surface_3().into()),
             border_width: Some(1.),
             padding: Some(Coords {

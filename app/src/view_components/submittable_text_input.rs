@@ -1,7 +1,8 @@
 use pathfinder_color::ColorU;
+use warp_core::ui::design;
 use warpui::elements::{
     Border, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
-    MouseStateHandle, ParentElement, Radius, Shrinkable,
+    MouseStateHandle, ParentElement, Shrinkable,
 };
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::{
@@ -156,7 +157,7 @@ impl View for SubmittableTextInput {
         let border_fill = if self.has_error {
             appearance.theme().ui_error_color().into()
         } else {
-            appearance.theme().outline()
+            design::control_border(appearance.theme())
         };
 
         let mut submit_button = appearance
@@ -204,7 +205,7 @@ impl View for SubmittableTextInput {
                 .finish(),
         )
         .with_border(Border::all(1.).with_border_fill(border_fill))
-        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+        .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
         .with_margin_top(self.outer_margin_top)
         .with_margin_bottom(self.outer_margin_bottom)
         .with_padding_left(4.)

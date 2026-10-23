@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use warp_core::ui::appearance::Appearance;
+use warp_core::ui::design::{SURFACE_RADIUS, subtle_border};
 use warp_core::ui::theme::Fill;
 use warpui_core::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
@@ -17,7 +18,6 @@ use crate::item::IconLocation;
 const DETAILS_MIN_WIDTH: f32 = 180.;
 const DETAILS_MAX_WIDTH: f32 = 480.;
 
-const CORNER_RADIUS: f32 = 8.;
 const DEFAULT_RESULT_HORIZONTAL_PADDING: f32 = 8.;
 
 /// Index of the [`QueryResult`] that was clicked.
@@ -60,10 +60,14 @@ impl Default for QueryResultRendererStyles {
             result_item_height_fn: |appearance| {
                 appearance.monospace_font_size() * (1.0 + appearance.line_height_ratio())
             },
-            panel_background_fill_fn: |appearance| appearance.theme().surface_2(),
-            panel_border_fn: |_| Border::new(0.),
+            panel_background_fill_fn: |appearance| {
+                appearance.theme().background().into_solid().into()
+            },
+            panel_border_fn: |appearance| {
+                Border::all(1.).with_border_fill(subtle_border(appearance.theme()))
+            },
             panel_drop_shadow: DropShadow::default(),
-            panel_corner_radius: CornerRadius::with_all(Radius::Pixels(CORNER_RADIUS)),
+            panel_corner_radius: CornerRadius::with_all(SURFACE_RADIUS),
             result_horizontal_padding: DEFAULT_RESULT_HORIZONTAL_PADDING,
             result_vertical_padding: 0.,
             result_multiline_vertical_padding: 0.,

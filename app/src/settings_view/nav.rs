@@ -1,6 +1,9 @@
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle};
-use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use warp_core::ui::design::{CONTROL_RADIUS, hover_background, selected_background};
+use warpui::elements::{
+    CornerRadius, Fill, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
+};
+use warpui::ui_components::button::{Button, ButtonVariant, TextAndIcon, TextAndIconAlignment};
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 use super::SettingsSection;
@@ -13,6 +16,41 @@ const SUBPAGE_FONT_SIZE: f32 = 10.;
 
 /// Left margin for subpage items inside an umbrella (top-level margin + indent).
 const SUBPAGE_LEFT_MARGIN: f32 = NAV_ITEM_LEFT_MARGIN + 12.;
+
+pub(super) fn navigation_button(
+    appearance: &Appearance,
+    mouse_state: MouseStateHandle,
+    is_active: bool,
+) -> Button {
+    let theme = appearance.theme();
+    appearance
+        .ui_builder()
+        .button(ButtonVariant::Text, mouse_state)
+        .with_style(UiComponentStyles {
+            background: Some(if is_active {
+                selected_background(theme).into()
+            } else {
+                Fill::None
+            }),
+            font_color: Some(if is_active {
+                theme.active_ui_text_color().into_solid()
+            } else {
+                theme.nonactive_ui_text_color().into_solid()
+            }),
+            border_width: Some(0.),
+            border_radius: Some(CornerRadius::with_all(CONTROL_RADIUS)),
+            ..Default::default()
+        })
+        .with_hovered_styles(UiComponentStyles {
+            background: Some(hover_background(theme).into()),
+            font_color: Some(theme.active_ui_text_color().into_solid()),
+            ..Default::default()
+        })
+        .with_clicked_styles(UiComponentStyles {
+            background: Some(selected_background(theme).into()),
+            ..Default::default()
+        })
+}
 
 /// A collapsible group of settings subpages in the sidebar.
 pub struct SettingsUmbrella {
@@ -68,9 +106,7 @@ impl SettingsUmbrella {
         // text label aligns with other top-level settings items and the
         // chevron sits flush-right — while the whole button area receives the
         // hover styling and pointing-hand cursor.
-        appearance
-            .ui_builder()
-            .button(ButtonVariant::Text, self.button_state_handle.clone())
+        navigation_button(appearance, self.button_state_handle.clone(), false)
             .with_text_and_icon_label(TextAndIcon::new(
                 TextAndIconAlignment::TextFirst,
                 self.label.to_string(),
@@ -101,16 +137,7 @@ impl SettingsUmbrella {
 
         let label = section.to_string() + &match_data.to_string();
 
-        let hoverable = appearance
-            .ui_builder()
-            .button(
-                if is_active {
-                    ButtonVariant::Accent
-                } else {
-                    ButtonVariant::Text
-                },
-                mouse_state,
-            )
+        let hoverable = navigation_button(appearance, mouse_state, is_active)
             .with_text_label(label)
             .with_style(
                 UiComponentStyles::default()

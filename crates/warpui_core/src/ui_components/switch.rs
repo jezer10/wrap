@@ -51,6 +51,8 @@ pub struct Switch {
     checked_styles: Option<UiComponentStyles>,
     disabled_styles: Option<UiComponentStyles>,
     hover_border_size: Option<f32>,
+    thumb_shadow: DropShadow,
+    thumb_hover_fill: Fill,
     mouse_state: SwitchStateHandle,
     tooltip: Option<TooltipConfig>,
 }
@@ -138,6 +140,8 @@ impl UiComponent for Switch {
             disabled_styles: Some(self.disabled_styles.unwrap_or(self.styles).merge(styles)),
             mouse_state: self.mouse_state,
             hover_border_size: self.hover_border_size,
+            thumb_shadow: self.thumb_shadow,
+            thumb_hover_fill: self.thumb_hover_fill,
             tooltip: self.tooltip,
         }
     }
@@ -161,6 +165,8 @@ impl Switch {
             disabled_styles,
             mouse_state,
             hover_border_size: None,
+            thumb_shadow: *DROP_SHADOW,
+            thumb_hover_fill: ColorU::new(TRACK_COLOR.r, TRACK_COLOR.g, TRACK_COLOR.b, 100).into(),
             tooltip: None,
         }
     }
@@ -168,6 +174,16 @@ impl Switch {
     /// Sets the a circular hover border on the thumb of size `border_size`.
     pub fn with_thumb_hover_border(mut self, border_size: f32) -> Self {
         self.hover_border_size = Some(border_size);
+        self
+    }
+
+    pub fn with_thumb_shadow(mut self, shadow: DropShadow) -> Self {
+        self.thumb_shadow = shadow;
+        self
+    }
+
+    pub fn with_thumb_hover_fill(mut self, fill: Fill) -> Self {
+        self.thumb_hover_fill = fill;
         self
     }
 
@@ -228,7 +244,7 @@ impl Switch {
                     Rect::new()
                         .with_background(thumb_color)
                         .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
-                        .with_drop_shadow(*DROP_SHADOW)
+                        .with_drop_shadow(self.thumb_shadow)
                         .finish(),
                 )
                 .with_width(thumb_height)
@@ -244,15 +260,12 @@ impl Switch {
                 && !is_disabled
                 && state.is_mouse_over_element()
             {
-                let mut hover_background = *TRACK_COLOR;
-                hover_background.a = 100;
-
                 let hover_size = thumb_height + border_size;
 
                 let thumb_hover = Container::new(
                     ConstrainedBox::new(
                         Rect::new()
-                            .with_background_color(hover_background)
+                            .with_background(self.thumb_hover_fill)
                             .with_corner_radius(CornerRadius::with_all(Radius::Percentage(50.)))
                             .finish(),
                     )

@@ -178,6 +178,7 @@ pub struct Scrollable {
     // The scrollbar is the runway for the draggable scrollbar. By default the scollbox renders to
     // the side of the child element. This setting makes the scrollbar render over the child instead.
     overlayed_scrollbar: bool,
+    cross_axis_scroll: bool,
 }
 
 impl Scrollable {
@@ -210,6 +211,7 @@ impl Scrollable {
             padding_after_scrollbar: RIGHT_PADDING,
             child_max_z_index: None,
             overlayed_scrollbar: false,
+            cross_axis_scroll: false,
         }
     }
 
@@ -258,6 +260,12 @@ impl Scrollable {
     /// Sets the padding between the child element and the scrollbar.
     pub fn with_padding_start(mut self, padding_start: f32) -> Self {
         self.padding_between_child_and_scrollbar = padding_start;
+        self
+    }
+
+    /// Remaps purely cross-axis wheel input while preserving diagonal gestures' main-axis delta.
+    pub fn with_cross_axis_scroll(mut self) -> Self {
+        self.cross_axis_scroll = true;
         self
     }
 
@@ -325,13 +333,19 @@ impl Scrollable {
             .scroll(delta / scrollbar_size_percentage_before_resize, ctx);
     }
 
-    fn mousewheel(&mut self, delta: Vector2F, precise: bool, ctx: &mut EventContext) {
+    fn mousewheel(&mut self, delta: Vector2F, precise: bool, ctx: &mut EventContext) -> bool {
         if self
             .scrollbar_size_percentage
             .expect("should be set at event dispatching time")
             < 1.
         {
-            let delta_along_axis = delta.along(self.axis);
+            let mut delta_along_axis = delta.along(self.axis);
+            if self.cross_axis_scroll && delta_along_axis == 0. {
+                delta_along_axis = delta.along(self.axis.invert());
+            }
+            if delta_along_axis == 0. {
+                return false;
+            }
             if precise {
                 self.child.scroll(delta_along_axis.into_pixels(), ctx);
             } else {
@@ -343,6 +357,9 @@ impl Scrollable {
                     ctx,
                 );
             }
+            true
+        } else {
+            false
         }
     }
 
@@ -653,15 +670,14 @@ impl Element for Scrollable {
                 precise,
                 modifiers: ModifiersState { ctrl: false, .. },
             } => {
-                if !self.child.should_handle_scroll_wheel() {
+                if handled || !self.child.should_handle_scroll_wheel() {
                     return handled;
                 }
 
                 if self.bounds().unwrap().contains_point(*position)
                     && !ctx.is_covered(Point::from_vec2f(*position, z_index))
                 {
-                    self.mousewheel(*delta, *precise, ctx);
-                    return true;
+                    return self.mousewheel(*delta, *precise, ctx);
                 }
                 handled
             }

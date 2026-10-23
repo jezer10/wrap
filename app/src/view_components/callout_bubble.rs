@@ -1,4 +1,5 @@
 use pathfinder_color::ColorU;
+use warp_core::ui::design;
 use warp_core::ui::theme::Fill;
 use warp_core::ui::theme::phenomenon::PhenomenonStyle;
 use warpui::Element;
@@ -97,7 +98,7 @@ pub fn render_callout_bubble(
         Container::new(content)
             .with_background(background)
             .with_border(Border::all(1.).with_border_fill(Fill::Solid(border_color)))
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
+            .with_corner_radius(CornerRadius::with_all(design::SURFACE_RADIUS))
             .finish(),
     )
     .with_width(config.width)

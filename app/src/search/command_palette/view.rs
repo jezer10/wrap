@@ -5,11 +5,12 @@ use std::sync::Arc;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use warp_core::send_telemetry_from_app_ctx;
+use warp_core::ui::design::{SURFACE_RADIUS, popup_shadow, subtle_border};
 use warp_util::path::LineAndColumnArg;
 use warpui::elements::{
     Align, Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, Dismiss, DispatchEventResult, Empty, EventHandler, Fill, Flex,
-    ParentElement, Radius, SavePosition, Shrinkable,
+    ParentElement, SavePosition, Shrinkable,
 };
 use warpui::event::KeyState;
 use warpui::keymap::BindingId;
@@ -194,12 +195,12 @@ impl warpui::View for View {
                             .with_max_height(styles::PALETTE_HEIGHT)
                             .finish(),
                     )
-                    .with_background(theme.surface_2())
-                    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))
-                    .with_border(Border::all(1.0).with_border_fill(theme.outline()))
+                    .with_background(theme.background().into_solid())
+                    .with_corner_radius(CornerRadius::with_all(SURFACE_RADIUS))
+                    .with_border(Border::all(1.0).with_border_fill(subtle_border(theme)))
                     .with_margin_top(117.)
                     .with_padding_bottom(10.)
-                    .with_drop_shadow(*styles::DROP_SHADOW)
+                    .with_drop_shadow(popup_shadow(theme))
                     .finish(),
                 )
                 .on_dismiss(|ctx, _app| ctx.dispatch_typed_action(Action::Close))

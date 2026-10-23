@@ -3,12 +3,13 @@ use std::time::Duration;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
 use uuid::Uuid;
+use warp_core::ui::design;
 use warpui::r#async::{SpawnedFutureHandle, Timer};
 use warpui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
-    DropShadow, EventHandler, Expanded, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning,
-    Padding, ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Radius,
-    SavePosition, Stack,
+    EventHandler, Expanded, Flex, Hoverable, Icon, MouseStateHandle, OffsetPositioning, Padding,
+    ParentElement, PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition,
+    Stack,
 };
 use warpui::keymap::Keystroke;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
@@ -25,7 +26,6 @@ use crate::workspace::{Workspace, WorkspaceAction};
 
 const AGENT_TOAST_WIDTH: f32 = 260.;
 const AGENT_TOAST_PADDING: f32 = 12.;
-const AGENT_TOAST_CORNER_RADIUS: f32 = 4.;
 const CLOSE_BUTTON_SIZE: f32 = 20.;
 
 /// Data for an individual agent toast
@@ -377,10 +377,8 @@ impl AgentToast {
                 let container = Container::new(content)
                     .with_padding(Padding::uniform(AGENT_TOAST_PADDING))
                     .with_background(appearance.theme().surface_3())
-                    .with_drop_shadow(DropShadow::default())
-                    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-                        AGENT_TOAST_CORNER_RADIUS,
-                    )));
+                    .with_drop_shadow(design::popup_shadow(appearance.theme()))
+                    .with_corner_radius(CornerRadius::with_all(design::SURFACE_RADIUS));
 
                 let mut stack = Stack::new().with_child(
                     SavePosition::new(container.finish(), &self.position_id(uuid)).finish(),
@@ -442,7 +440,7 @@ impl AgentToast {
             font_color: Some(blended_colors::text_main(theme, theme.surface_2())),
             font_size: Some(appearance.ui_font_size()),
             background: Some(theme.surface_2().into()),
-            border_radius: Some(CornerRadius::with_all(Radius::Pixels(3.0))),
+            border_radius: Some(CornerRadius::with_all(design::COMPACT_RADIUS)),
             padding: Some(Coords {
                 top: 1.0,
                 bottom: 1.0,

@@ -1,11 +1,12 @@
 use pathfinder_color::ColorU;
 use serde::Serialize;
+use warp_core::ui::design;
 pub use warpui::AppContext;
 pub use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
 use warpui::elements::{
     Align, Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius,
-    CrossAxisAlignment, DropShadow, Element, Flex, Hoverable, MouseStateHandle, OffsetPositioning,
-    ParentAnchor, ParentOffsetBounds, Radius, SavePosition, Shrinkable, Text,
+    CrossAxisAlignment, Element, Flex, Hoverable, MouseStateHandle, OffsetPositioning,
+    ParentAnchor, ParentOffsetBounds, SavePosition, Shrinkable, Text,
 };
 pub use warpui::elements::{ParentElement as _, Stack};
 pub use warpui::geometry::vector::vec2f;
@@ -32,10 +33,8 @@ use crate::ui_components::icons::Icon;
 pub const FIND_BAR_WIDTH: f32 = 500.;
 const ICON_PADDING: f32 = 4.;
 const HORIZONTAL_ICON_SPACING: f32 = 4.;
-const ICON_CONTAINER_CORNER_RADIUS: f32 = 4.;
 pub const FIND_BAR_PADDING: f32 = 4.;
 const FIND_EDITOR_PADDING: f32 = 6.;
-pub const FIND_EDITOR_BORDER_RADIUS: f32 = 6.;
 pub(crate) const FIND_EDITOR_BORDER_WIDTH: f32 = 1.;
 const FIND_EDITOR_FONT_SIZE: f32 = 12.;
 
@@ -373,7 +372,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
                     appearance.theme().find_bar_button_selection_color(),
                 )
             } else if state.is_hovered() {
-                let hover_color = appearance.theme().foreground_button_color();
+                let hover_color = design::hover_background(appearance.theme());
                 (Border::all(1.).with_border_fill(hover_color), hover_color)
             } else {
                 let transparent = Fill::Solid(ColorU::transparent_black());
@@ -393,9 +392,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             .with_margin_right(right_margin)
             .with_border(border)
             .with_background(background)
-            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-                ICON_CONTAINER_CORNER_RADIUS,
-            )))
+            .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
             .finish();
 
             let mut stack = Stack::new().with_child(icon);
@@ -431,7 +428,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
         app: &AppContext,
     ) -> Box<dyn Element> {
         let background_color = if hovered && self.model.as_ref(app).match_count() > 0 {
-            appearance.theme().foreground_button_color()
+            design::hover_background(appearance.theme())
         } else {
             Fill::Solid(ColorU::transparent_black())
         };
@@ -451,9 +448,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
                 .finish(),
         )
         .with_background(background_color)
-        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-            ICON_CONTAINER_CORNER_RADIUS,
-        )))
+        .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
         .with_uniform_padding(ICON_PADDING)
         .finish()
     }
@@ -465,7 +460,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
         height: f32,
     ) -> Box<dyn Element> {
         let background_color = if hovered {
-            appearance.theme().foreground_button_color()
+            design::hover_background(appearance.theme())
         } else {
             Fill::Solid(ColorU::transparent_black())
         };
@@ -480,9 +475,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             .finish(),
         )
         .with_background(background_color)
-        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-            ICON_CONTAINER_CORNER_RADIUS,
-        )))
+        .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
         .with_uniform_padding(ICON_PADDING)
         .finish()
     }
@@ -612,14 +605,12 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> View for Find<T> {
                     Container::new(query_editor_row.finish())
                         .with_padding_right(4.)
                         .with_padding_left(8.)
-                        .with_background(appearance.theme().surface_1())
+                        .with_background(appearance.theme().background())
                         .with_border(
                             Border::all(FIND_EDITOR_BORDER_WIDTH)
-                                .with_border_fill(appearance.theme().surface_3()),
+                                .with_border_fill(design::control_border(appearance.theme())),
                         )
-                        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-                            FIND_EDITOR_BORDER_RADIUS,
-                        )))
+                        .with_corner_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
                         .with_margin_right(2. * HORIZONTAL_ICON_SPACING)
                         .finish(),
                 )
@@ -691,7 +682,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> View for Find<T> {
         let find_bar = Container::new(
             ConstrainedBox::new(
                 Container::new(find_row.finish())
-                    .with_background(appearance.theme().surface_2())
+                    .with_background(appearance.theme().surface_1())
                     .finish(),
             )
             .with_height(editor_height + (2. * FIND_EDITOR_PADDING) + (2. * FIND_BAR_PADDING))
@@ -699,11 +690,9 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> View for Find<T> {
             .finish(),
         )
         .with_uniform_padding(FIND_BAR_PADDING)
-        .with_background(appearance.theme().surface_2())
-        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(
-            FIND_EDITOR_BORDER_RADIUS,
-        )))
-        .with_drop_shadow(DropShadow::default())
+        .with_background(appearance.theme().surface_1())
+        .with_corner_radius(CornerRadius::with_all(design::SURFACE_RADIUS))
+        .with_drop_shadow(design::popup_shadow(appearance.theme()))
         .finish();
 
         Align::new(

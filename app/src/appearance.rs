@@ -308,6 +308,25 @@ fn load_default_monospace_font_family(ctx: &mut AppContext) -> anyhow::Result<Fa
 
 fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
     warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
+        if cfg!(target_os = "linux") {
+            return font_cache.load_family_from_bytes(
+                "Manrope",
+                vec![
+                    ASSETS
+                        .get("bundled/fonts/manrope/Manrope-Regular.ttf")?
+                        .to_vec(),
+                    ASSETS
+                        .get("bundled/fonts/manrope/Manrope-Medium.ttf")?
+                        .to_vec(),
+                    ASSETS
+                        .get("bundled/fonts/manrope/Manrope-SemiBold.ttf")?
+                        .to_vec(),
+                    ASSETS
+                        .get("bundled/fonts/manrope/Manrope-Bold.ttf")?
+                        .to_vec(),
+                ],
+            );
+        }
         let roboto = font_cache.load_family_from_bytes(
             "Roboto",
             vec![

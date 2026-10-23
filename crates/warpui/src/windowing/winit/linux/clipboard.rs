@@ -132,7 +132,7 @@ impl LinuxClipboard {
         &mut self,
         clipboard_kind: LinuxClipboardKind,
     ) -> Result<ClipboardContent, arboard::Error> {
-        let text_result = self.inner.get().text();
+        let text_result = self.inner.get().clipboard(clipboard_kind).text();
         let mut content = ClipboardContent {
             plain_text: text_result.as_ref().map(|s| s.clone()).unwrap_or_default(),
             ..Default::default()
@@ -148,7 +148,7 @@ impl LinuxClipboard {
 
                 // Try to get image content from clipboard
                 content.images = crate::clipboard_utils::read_images_from_clipboard(
-                    &mut self.inner,
+                    self.inner.get().clipboard(clipboard_kind),
                     &content.html,
                     &content.plain_text,
                 );
@@ -164,7 +164,7 @@ impl LinuxClipboard {
 
         // Fallback to using plaintext
         content.images = crate::clipboard_utils::read_images_from_clipboard(
-            &mut self.inner,
+            self.inner.get().clipboard(clipboard_kind),
             &None, // No HTML in fallback case
             &content.plain_text,
         );

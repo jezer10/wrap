@@ -690,6 +690,18 @@ pub enum WorkspaceAction {
     OpenRepository {
         path: Option<String>,
     },
+    HoverProject {
+        path: String,
+        hovered: bool,
+    },
+    ToggleProjectDetails {
+        path: String,
+    },
+    EditProject {
+        path: String,
+    },
+    SaveProjectAlias,
+    CloseProjectDetails,
     /// Open the native folder picker for a repo param in the tab-config modal after the
     /// current interaction cycle finishes.
     OpenTabConfigRepoPicker {
@@ -1011,7 +1023,12 @@ impl WorkspaceAction {
             | OpenVerticalTabsPanel => true, // actions that actually change a state of the state of user's
             // workspace would most likely require a save, so that if the app gets
             // restarted, the user can continue working
-            AutoupdateFailureLink
+            HoverProject { .. }
+            | ToggleProjectDetails { .. }
+            | EditProject { .. }
+            | SaveProjectAlias
+            | CloseProjectDetails
+            | AutoupdateFailureLink
             | ApplyUpdate
             | CopyVersion(_)
             | DownloadNewVersion

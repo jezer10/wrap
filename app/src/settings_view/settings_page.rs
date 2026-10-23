@@ -42,6 +42,7 @@ use super::keybindings::KeybindingsView;
 use super::knowledge_page::KnowledgePageView;
 use super::main_page::MainSettingsPageView;
 use super::mcp_servers_page::MCPServersSettingsPageView;
+use super::nav::navigation_button;
 use super::privacy_page::PrivacyPageView;
 use super::referrals_page::ReferralsPageView;
 use super::scripting_page::ScriptingSettingsPageView;
@@ -187,16 +188,7 @@ impl SettingsPage {
         match_data: MatchData,
         clicked: bool,
     ) -> Hoverable {
-        appearance
-            .ui_builder()
-            .button(
-                if clicked {
-                    ButtonVariant::Accent
-                } else {
-                    ButtonVariant::Text
-                },
-                self.button_state_handle.clone(),
-            )
+        navigation_button(appearance, self.button_state_handle.clone(), clicked)
             .with_text_label(self.section.to_string() + &match_data.to_string())
             .with_style(
                 UiComponentStyles::default()

@@ -1,9 +1,10 @@
-use warpui::elements::{CornerRadius, MouseStateHandle, Radius};
+use warp_core::ui::design;
+use warpui::elements::{CornerRadius, MouseStateHandle};
 use warpui::ui_components::button::Button;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
+use super::blended_colors;
 use super::icons::{ICON_DIMENSIONS, Icon};
-use super::{BORDER_RADIUS, blended_colors};
 use crate::appearance::Appearance;
 use crate::themes::theme::{Fill, WarpTheme};
 
@@ -51,10 +52,10 @@ fn icon_button_styles(
     let (background_color, border_color): (Option<Fill>, Option<Fill>) = match (mode, state) {
         (ButtonMode::Base, ButtonState::Default) => (None, None),
         (ButtonMode::Base, ButtonState::Hover) => {
-            (Some(warp_theme.surface_2()), Some(warp_theme.surface_3()))
+            (Some(design::hover_background(warp_theme)), None)
         }
         (ButtonMode::Base, ButtonState::Pressed) | (ButtonMode::Base, ButtonState::Disabled) => {
-            (Some(warp_theme.background()), Some(warp_theme.surface_3()))
+            (Some(design::selected_background(warp_theme)), None)
         }
         (ButtonMode::Accent, ButtonState::Default) => (None, None),
         (ButtonMode::Accent, ButtonState::Hover) => (
@@ -73,7 +74,7 @@ fn icon_button_styles(
         .set_height(ICON_DIMENSIONS)
         .set_border_width(0.)
         .set_padding(Coords::uniform(ICON_BUTTON_PADDING))
-        .set_border_radius(CornerRadius::with_all(Radius::Pixels(BORDER_RADIUS)))
+        .set_border_radius(CornerRadius::with_all(design::CONTROL_RADIUS))
         .set_font_color(icon_color.into());
 
     if let Some(border_color) = border_color {
@@ -88,8 +89,8 @@ fn icon_button_styles(
 fn combo_inner_button_styles(warp_theme: &WarpTheme, state: ButtonState) -> UiComponentStyles {
     let background = match state {
         ButtonState::Default => None,
-        ButtonState::Hover => Some(blended_colors::neutral_2(warp_theme)),
-        ButtonState::Pressed => Some(blended_colors::neutral_4(warp_theme)),
+        ButtonState::Hover => Some(design::hover_background(warp_theme).into_solid()),
+        ButtonState::Pressed => Some(design::selected_background(warp_theme).into_solid()),
         ButtonState::Disabled => Some(warp_theme.background().into()),
     };
 
@@ -238,12 +239,12 @@ pub fn highlight(button: Button, appearance: &Appearance) -> Button {
         ))
         .with_hovered_styles(
             UiComponentStyles::default()
-                .set_background(appearance.theme().surface_3().into())
+                .set_background(design::hover_background(appearance.theme()).into())
                 .set_font_color(appearance.theme().foreground().into()),
         )
         .with_clicked_styles(
             UiComponentStyles::default()
-                .set_background(appearance.theme().background().into())
+                .set_background(design::selected_background(appearance.theme()).into())
                 .set_font_color(appearance.theme().foreground().into()),
         )
 }

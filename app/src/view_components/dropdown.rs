@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use pathfinder_color::ColorU;
+use warp_core::ui::design;
 use warpui::elements::{
     Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, Element, Fill, Icon,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,
@@ -273,7 +274,7 @@ where
             let theme = Appearance::as_ref(ctx).theme();
             Menu::new()
                 .with_menu_variant(MenuVariant::scrollable())
-                .with_border(Border::all(1.).with_border_fill(theme.outline()))
+                .with_border(Border::all(1.).with_border_fill(design::subtle_border(theme)))
                 .prevent_interaction_with_other_elements()
         });
         ctx.subscribe_to_view(&dropdown, move |me, _, event, ctx| {
@@ -769,7 +770,7 @@ where
             let mut menu = ChildView::new(&self.dropdown).finish();
             if self.use_drop_shadow {
                 menu = Container::new(menu)
-                    .with_drop_shadow(DropShadow::default())
+                    .with_drop_shadow(design::popup_shadow(appearance.theme()))
                     .finish();
             }
             let positioning = OffsetPositioning::offset_from_save_position_element(
